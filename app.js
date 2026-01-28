@@ -44,7 +44,11 @@
     latencyWaiting: false,
     latencyBaseline: null,
     latencyMeasurements: [],
-    latencyThreshold: 2.0 // m/s² above baseline to detect tap impact
+    latencyThreshold: 2.0, // m/s² above baseline to detect tap impact
+    
+    // Audio
+    audioContext: null,
+    audioEnabled: true
   };
 
   // ============================================
@@ -437,6 +441,45 @@
   }
 
   // ============================================
+  // Audio Feedback
+  // ============================================
+  
+  function initAudio() {
+    // Create audio context on first user interaction (required by browsers)
+    if (!state.audioContext) {
+      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // Resume if suspended (iOS requires this)
+    if (state.audioContext.state === 'suspended') {
+      state.audioContext.resume();
+    }
+  }
+  
+  function playClick() {
+    if (!state.audioEnabled || !state.audioContext) return;
+    
+    const ctx = state.audioContext;
+    const now = ctx.currentTime;
+    
+    // Create a short click/pop sound
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    // Short, punchy click - starts loud, fades fast
+    oscillator.frequency.setValueAtTime(800, now);
+    oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+    
+    gainNode.gain.setValueAtTime(0.3, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    
+    oscillator.start(now);
+    oscillator.stop(now + 0.05);
+  }
+
+  // ============================================
   // Latency Measurement
   // ============================================
   
@@ -447,6 +490,9 @@
     }
     
     if (state.latencyWaiting) return;
+    
+    // Initialize audio on first tap (requires user gesture)
+    initAudio();
     
     // Record tap time with highest precision available
     state.latencyTapTime = performance.now();
@@ -499,6 +545,9 @@
       if (latency > 0 && latency < 500) {
         state.latencyMeasurements.push(latency);
         updateLatencyDisplay(latency);
+        
+        // Play click sound - this is the sound delayed by sensor latency!
+        playClick();
         
         // Visual feedback - success
         elements.latencyTarget.classList.remove('waiting');
