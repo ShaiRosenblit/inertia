@@ -35,7 +35,14 @@
     
     // Latest values (for noise measurement)
     lastAccel: { x: 0, y: 0, z: 0 },
-    lastGyro: { alpha: 0, beta: 0, gamma: 0 }
+    lastGyro: { alpha: 0, beta: 0, gamma: 0 },
+    
+    // Latency measurement
+    latencyTapTime: null,
+    latencyWaiting: false,
+    latencyBaseline: null,
+    latencyMeasurements: [],
+    latencyThreshold: 2.0 // m/s² above baseline to detect tap impact
   };
 
   // ============================================
@@ -90,7 +97,17 @@
     apiDeviceMotion: document.getElementById('api-devicemotion'),
     apiDeviceOrientation: document.getElementById('api-deviceorientation'),
     apiGenericSensor: document.getElementById('api-genericsensor'),
-    apiUserAgent: document.getElementById('api-useragent')
+    apiUserAgent: document.getElementById('api-useragent'),
+    
+    // Latency
+    latencyTarget: document.getElementById('latency-target'),
+    latencyResults: document.getElementById('latency-results'),
+    latencyLast: document.getElementById('latency-last'),
+    latencyAvg: document.getElementById('latency-avg'),
+    latencyMin: document.getElementById('latency-min'),
+    latencyMax: document.getElementById('latency-max'),
+    latencyTapCount: document.getElementById('latency-tap-count'),
+    resetLatency: document.getElementById('reset-latency')
   };
 
   // ============================================
@@ -142,6 +159,11 @@
     elements.stopRecording.addEventListener('click', stopRecording);
     elements.exportCsv.addEventListener('click', () => exportData('csv'));
     elements.exportJson.addEventListener('click', () => exportData('json'));
+    
+    // Latency test - use touchstart for lowest latency on mobile
+    elements.latencyTarget.addEventListener('touchstart', handleLatencyTap, { passive: true });
+    elements.latencyTarget.addEventListener('mousedown', handleLatencyTap);
+    elements.resetLatency.addEventListener('click', resetLatencyTest);
   }
 
   // ============================================
@@ -322,6 +344,9 @@
       });
       elements.recordingCount.textContent = state.recordedData.length;
     }
+    
+    // Latency detection
+    checkLatencySpike(data);
   }
 
   // ============================================
@@ -391,6 +416,104 @@
       const rate = state.sampleCount / elapsed;
       elements.sampleRate.textContent = formatValue(rate, 1) + ' Hz';
     }
+  }
+
+  // ============================================
+  // Latency Measurement
+  // ============================================
+  
+  function handleLatencyTap(event) {
+    // Prevent double-firing from both touch and mouse events
+    if (event.type === 'mousedown' && 'ontouchstart' in window) {
+      return;
+    }
+    
+    if (state.latencyWaiting) return;
+    
+    // Record tap time with highest precision available
+    state.latencyTapTime = performance.now();
+    state.latencyWaiting = true;
+    
+    // Store current acceleration as baseline
+    const mag = Math.sqrt(
+      state.lastAccel.x ** 2 + 
+      state.lastAccel.y ** 2 + 
+      state.lastAccel.z ** 2
+    );
+    state.latencyBaseline = mag;
+    
+    // Visual feedback
+    elements.latencyTarget.classList.add('waiting');
+    elements.latencyTarget.querySelector('span').textContent = 'WAITING...';
+    
+    // Timeout if no spike detected
+    setTimeout(() => {
+      if (state.latencyWaiting) {
+        state.latencyWaiting = false;
+        elements.latencyTarget.classList.remove('waiting');
+        elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
+      }
+    }, 500);
+  }
+  
+  function checkLatencySpike(data) {
+    if (!state.latencyWaiting || !data.acceleration) return;
+    
+    const mag = Math.sqrt(
+      (data.acceleration.x || 0) ** 2 + 
+      (data.acceleration.y || 0) ** 2 + 
+      (data.acceleration.z || 0) ** 2
+    );
+    
+    // Check if we have a significant spike above baseline
+    const delta = Math.abs(mag - (state.latencyBaseline || 9.8));
+    
+    if (delta > state.latencyThreshold) {
+      const latency = data.timestamp - state.latencyTapTime;
+      
+      // Sanity check - latency should be positive and reasonable
+      if (latency > 0 && latency < 500) {
+        state.latencyMeasurements.push(latency);
+        updateLatencyDisplay(latency);
+      }
+      
+      state.latencyWaiting = false;
+      
+      // Visual feedback
+      elements.latencyTarget.classList.remove('waiting');
+      elements.latencyTarget.classList.add('detected');
+      elements.latencyTarget.querySelector('span').textContent = `${latency.toFixed(1)} ms`;
+      
+      setTimeout(() => {
+        elements.latencyTarget.classList.remove('detected');
+        elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
+      }, 800);
+    }
+  }
+  
+  function updateLatencyDisplay(lastLatency) {
+    const measurements = state.latencyMeasurements;
+    
+    elements.latencyResults.classList.remove('hidden');
+    elements.latencyLast.textContent = lastLatency.toFixed(1) + ' ms';
+    elements.latencyTapCount.textContent = measurements.length;
+    
+    if (measurements.length > 0) {
+      const stats = calculateStats(measurements);
+      elements.latencyAvg.textContent = stats.mean.toFixed(1) + ' ms';
+      elements.latencyMin.textContent = stats.min.toFixed(1) + ' ms';
+      elements.latencyMax.textContent = stats.max.toFixed(1) + ' ms';
+    }
+  }
+  
+  function resetLatencyTest() {
+    state.latencyMeasurements = [];
+    state.latencyWaiting = false;
+    state.latencyTapTime = null;
+    
+    elements.latencyResults.classList.add('hidden');
+    elements.latencyTarget.classList.remove('waiting', 'detected');
+    elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
   }
 
   // ============================================

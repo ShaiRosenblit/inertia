@@ -247,6 +247,56 @@ header h1 {
   color: var(--text-primary);
 }
 
+/* Latency Test */
+.latency-target {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.latency-target:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+
+.latency-target span {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: white;
+}
+
+.latency-target.waiting {
+  background: var(--accent-warning);
+  animation: pulse-bg 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse-bg {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.latency-target.detected {
+  background: var(--accent-success);
+}
+
+.latency-results {
+  margin-top: 16px;
+}
+
+.latency-count {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 12px 0;
+}
+
 /* Noise Analysis */
 .hint {
   font-size: 0.85rem;

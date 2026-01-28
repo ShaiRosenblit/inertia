@@ -111,6 +111,37 @@
         </div>
       </section>
 
+      <!-- Latency Test -->
+      <section class="card">
+        <h2>Tap Latency Test</h2>
+        <p class="hint">Tap the target to measure touch → sensor delay</p>
+        <div id="latency-target" class="latency-target">
+          <span>TAP HERE</span>
+        </div>
+        <div id="latency-results" class="latency-results hidden">
+          <div class="timing-grid">
+            <div class="timing-item">
+              <span class="timing-label">Last Tap</span>
+              <span id="latency-last" class="timing-value">-- ms</span>
+            </div>
+            <div class="timing-item">
+              <span class="timing-label">Average</span>
+              <span id="latency-avg" class="timing-value">-- ms</span>
+            </div>
+            <div class="timing-item">
+              <span class="timing-label">Min</span>
+              <span id="latency-min" class="timing-value">-- ms</span>
+            </div>
+            <div class="timing-item">
+              <span class="timing-label">Max</span>
+              <span id="latency-max" class="timing-value">-- ms</span>
+            </div>
+          </div>
+          <p class="latency-count">Taps: <span id="latency-tap-count">0</span></p>
+          <button id="reset-latency" class="btn-secondary">Reset</button>
+        </div>
+      </section>
+
       <!-- Noise Analysis (when stationary) -->
       <section class="card">
         <h2>Noise Analysis</h2>
