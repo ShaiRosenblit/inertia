@@ -46,6 +46,15 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* Optimize touch handling */
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* When recording, disable scroll to prevent sample drops */
+body.recording-active {
+  overflow: hidden;
+  touch-action: none;
 }
 
 .container {
@@ -149,7 +158,7 @@ header h1 {
 
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   text-align: center;
 }
@@ -172,6 +181,19 @@ header h1 {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--accent-success);
+}
+
+.status-dropped {
+  color: var(--accent-error);
+}
+
+.status-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
 }
 
 /* Sensor Grid */

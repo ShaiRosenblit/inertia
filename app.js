@@ -21,6 +21,8 @@
     lastTimestamp: null,
     intervals: [],
     maxIntervalsStored: 100,
+    droppedSamples: 0,
+    expectedInterval: 16.67, // ~60Hz
     
     // Sample counting
     sampleCount: 0,
@@ -60,6 +62,7 @@
     sensorStatus: document.getElementById('sensor-status'),
     sampleRate: document.getElementById('sample-rate'),
     sampleCount: document.getElementById('sample-count'),
+    droppedCount: document.getElementById('dropped-count'),
     
     // Accelerometer
     accelX: document.getElementById('accel-x'),
@@ -263,7 +266,8 @@
   }
 
   function useDeviceMotionAPI() {
-    window.addEventListener('devicemotion', handleDeviceMotion, true);
+    // Use passive: true to hint browser this won't block scrolling
+    window.addEventListener('devicemotion', handleDeviceMotion, { passive: true, capture: false });
     
     elements.sensorStatus.textContent = 'DeviceMotion API';
     elements.sensorStatus.style.color = 'var(--accent-warning)';
@@ -280,6 +284,12 @@
       state.intervals.push(measuredInterval);
       if (state.intervals.length > state.maxIntervalsStored) {
         state.intervals.shift();
+      }
+      
+      // Detect dropped samples (if interval > 1.5x expected, we likely dropped frames)
+      if (measuredInterval > state.expectedInterval * 1.5) {
+        const dropped = Math.round(measuredInterval / state.expectedInterval) - 1;
+        state.droppedSamples += dropped;
       }
     }
     state.lastTimestamp = now;
@@ -409,6 +419,7 @@
 
   function updateStatusDisplay() {
     elements.sampleCount.textContent = state.sampleCount.toLocaleString();
+    elements.droppedCount.textContent = state.droppedSamples.toLocaleString();
     
     // Calculate actual sample rate
     if (state.startTime && state.sampleCount > 10) {
@@ -570,6 +581,16 @@
     state.isRecording = true;
     state.recordedData = [];
     
+    // Lock scrolling to prevent sample drops
+    document.body.classList.add('recording-active');
+    
+    // Try to lock screen orientation
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('portrait').catch(() => {
+        // Orientation lock not supported or denied - that's fine
+      });
+    }
+    
     elements.startRecording.classList.add('hidden');
     elements.stopRecording.classList.remove('hidden');
     elements.exportCsv.classList.add('hidden');
@@ -580,6 +601,14 @@
 
   function stopRecording() {
     state.isRecording = false;
+    
+    // Unlock scrolling
+    document.body.classList.remove('recording-active');
+    
+    // Unlock screen orientation
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
     
     elements.startRecording.classList.remove('hidden');
     elements.stopRecording.classList.add('hidden');
