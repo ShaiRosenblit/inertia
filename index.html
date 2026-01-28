@@ -160,6 +160,34 @@
         </div>
       </section>
 
+      <!-- Theremin -->
+      <section class="card theremin-card">
+        <h2>🎵 Theremin</h2>
+        <p class="hint">Roll (left/right) = pitch, Tilt (forward/back) = volume</p>
+        
+        <button id="theremin-toggle" class="btn-primary theremin-btn">▶ Start Theremin</button>
+        
+        <div id="theremin-display" class="theremin-display hidden">
+          <div class="theremin-viz">
+            <canvas id="theremin-canvas" width="300" height="150"></canvas>
+          </div>
+          <div class="theremin-info">
+            <div class="theremin-param">
+              <span class="param-label">Note</span>
+              <span id="theremin-note" class="param-value">--</span>
+            </div>
+            <div class="theremin-param">
+              <span class="param-label">Frequency</span>
+              <span id="theremin-freq" class="param-value">-- Hz</span>
+            </div>
+            <div class="theremin-param">
+              <span class="param-label">Volume</span>
+              <span id="theremin-vol" class="param-value">--%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Orientation (Stable!) -->
       <section class="card">
         <h2>Orientation (Stable!) ⭐</h2>
@@ -297,7 +325,7 @@
 
     <footer>
       <p>Inertia IMU Diagnostics • <a href="https://github.com/ShaiRosenblit/inertia">GitHub</a></p>
-      <p class="version">Build: 2026-01-28 14:41 IST</p>
+      <p class="version">Build: 2026-01-28 14:46 IST</p>
     </footer>
   </div>
 

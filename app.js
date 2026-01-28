@@ -68,7 +68,14 @@
     orientation: { alpha: 0, beta: 0, gamma: 0 },
     orientationOffset: { alpha: 0, beta: 0, gamma: 0 },
     orientationHistory: [],
-    maxOrientationHistory: 600 // 10 seconds at 60Hz
+    maxOrientationHistory: 600, // 10 seconds at 60Hz
+    
+    // Theremin
+    thereminPlaying: false,
+    thereminOscillator: null,
+    thereminGain: null,
+    thereminFreq: 440,
+    thereminVol: 0
   };
 
   // ============================================
@@ -138,6 +145,14 @@
     latencyMax: document.getElementById('latency-max'),
     latencyTapCount: document.getElementById('latency-tap-count'),
     resetLatency: document.getElementById('reset-latency'),
+    
+    // Theremin
+    thereminToggle: document.getElementById('theremin-toggle'),
+    thereminDisplay: document.getElementById('theremin-display'),
+    thereminCanvas: document.getElementById('theremin-canvas'),
+    thereminNote: document.getElementById('theremin-note'),
+    thereminFreq: document.getElementById('theremin-freq'),
+    thereminVol: document.getElementById('theremin-vol'),
     
     // Orientation
     orientPitch: document.getElementById('orient-pitch'),
@@ -225,6 +240,9 @@
     // Screen lock controls
     document.getElementById('lock-portrait').addEventListener('click', lockPortrait);
     document.getElementById('exit-fullscreen').addEventListener('click', exitFullscreen);
+    
+    // Theremin controls
+    elements.thereminToggle.addEventListener('click', toggleTheremin);
     
     // Orientation controls
     elements.resetOrientation.addEventListener('click', resetOrientationZero);
@@ -367,6 +385,11 @@
     
     // Update display
     updateOrientationDisplay(pitch, roll, yaw);
+    
+    // Update theremin if playing
+    if (state.thereminPlaying) {
+      updateTheremin(pitch, roll);
+    }
   }
   
   function updateOrientationDisplay(pitch, roll, yaw) {
@@ -654,6 +677,164 @@
       const rate = state.sampleCount / elapsed;
       elements.sampleRate.textContent = formatValue(rate, 1) + ' Hz';
     }
+  }
+
+  // ============================================
+  // Theremin
+  // ============================================
+  
+  function toggleTheremin() {
+    if (state.thereminPlaying) {
+      stopTheremin();
+    } else {
+      startTheremin();
+    }
+  }
+  
+  function startTheremin() {
+    // Initialize audio context if needed
+    initAudio();
+    
+    if (!state.audioContext) {
+      alert('Audio not available');
+      return;
+    }
+    
+    const ctx = state.audioContext;
+    
+    // Create oscillator
+    state.thereminOscillator = ctx.createOscillator();
+    state.thereminOscillator.type = 'sine';
+    state.thereminOscillator.frequency.setValueAtTime(440, ctx.currentTime);
+    
+    // Create gain for volume control
+    state.thereminGain = ctx.createGain();
+    state.thereminGain.gain.setValueAtTime(0, ctx.currentTime);
+    
+    // Connect: oscillator -> gain -> output
+    state.thereminOscillator.connect(state.thereminGain);
+    state.thereminGain.connect(ctx.destination);
+    
+    // Start oscillator
+    state.thereminOscillator.start();
+    
+    state.thereminPlaying = true;
+    elements.thereminToggle.textContent = '⏹ Stop Theremin';
+    elements.thereminToggle.classList.add('playing');
+    elements.thereminDisplay.classList.remove('hidden');
+    
+    console.log('Theremin started');
+  }
+  
+  function stopTheremin() {
+    if (state.thereminOscillator) {
+      state.thereminOscillator.stop();
+      state.thereminOscillator.disconnect();
+      state.thereminOscillator = null;
+    }
+    if (state.thereminGain) {
+      state.thereminGain.disconnect();
+      state.thereminGain = null;
+    }
+    
+    state.thereminPlaying = false;
+    elements.thereminToggle.textContent = '▶ Start Theremin';
+    elements.thereminToggle.classList.remove('playing');
+    elements.thereminDisplay.classList.add('hidden');
+    
+    console.log('Theremin stopped');
+  }
+  
+  function updateTheremin(pitch, roll) {
+    if (!state.thereminPlaying || !state.thereminOscillator || !state.thereminGain) return;
+    
+    const ctx = state.audioContext;
+    const now = ctx.currentTime;
+    
+    // Map roll (-90 to +90) to frequency (C3 to C6 = ~131Hz to ~1047Hz)
+    // Using exponential mapping for musical perception
+    const rollNorm = (roll + 90) / 180; // 0 to 1
+    const minFreq = 130.81; // C3
+    const maxFreq = 1046.50; // C6
+    const freq = minFreq * Math.pow(maxFreq / minFreq, rollNorm);
+    
+    // Map pitch (-90 to +90) to volume (0 to 1)
+    // Tilt forward (positive pitch) = louder
+    // Center position = medium volume
+    const pitchNorm = (pitch + 45) / 90; // -45 to +45 -> 0 to 1
+    const vol = Math.max(0, Math.min(1, pitchNorm));
+    
+    // Smooth transitions to avoid clicks
+    state.thereminOscillator.frequency.setTargetAtTime(freq, now, 0.03);
+    state.thereminGain.gain.setTargetAtTime(vol * 0.3, now, 0.03); // Max 0.3 to avoid clipping
+    
+    // Store for display
+    state.thereminFreq = freq;
+    state.thereminVol = vol;
+    
+    // Update display
+    updateThereminDisplay(freq, vol);
+  }
+  
+  function updateThereminDisplay(freq, vol) {
+    // Find closest note name
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const a4 = 440;
+    const semitones = 12 * Math.log2(freq / a4);
+    const noteNum = Math.round(semitones) + 49; // A4 is note 49
+    const octave = Math.floor((noteNum - 1) / 12);
+    const noteName = noteNames[(noteNum - 1) % 12];
+    
+    elements.thereminNote.textContent = noteName + octave;
+    elements.thereminFreq.textContent = freq.toFixed(0) + ' Hz';
+    elements.thereminVol.textContent = Math.round(vol * 100) + '%';
+    
+    // Draw visualization
+    drawThereminViz(freq, vol);
+  }
+  
+  function drawThereminViz(freq, vol) {
+    const canvas = elements.thereminCanvas;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear with fade effect
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw waveform representation
+    const centerY = height / 2;
+    const amplitude = (height / 2 - 10) * vol;
+    const wavelength = (1047 / freq) * 100; // Inverse relationship
+    
+    ctx.strokeStyle = `hsl(${280 - vol * 80}, 80%, 60%)`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    for (let x = 0; x < width; x++) {
+      const phase = (x / wavelength) * Math.PI * 2 + performance.now() / 100;
+      const y = centerY + Math.sin(phase) * amplitude;
+      
+      if (x === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    
+    ctx.stroke();
+    
+    // Draw frequency indicator line
+    const freqX = ((Math.log2(freq) - Math.log2(130.81)) / (Math.log2(1046.5) - Math.log2(130.81))) * width;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(freqX, 0);
+    ctx.lineTo(freqX, 10);
+    ctx.stroke();
   }
 
   // ============================================

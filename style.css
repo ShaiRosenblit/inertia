@@ -152,6 +152,63 @@ header h1 {
 }
 
 /* Status Grid */
+/* Theremin */
+.theremin-card {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-color: var(--accent-primary);
+}
+
+.theremin-btn {
+  font-size: 1.2rem;
+  padding: 16px 32px;
+}
+
+.theremin-btn.playing {
+  background: var(--accent-error);
+}
+
+.theremin-display {
+  margin-top: 16px;
+}
+
+.theremin-viz {
+  margin-bottom: 16px;
+}
+
+.theremin-viz canvas {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.theremin-info {
+  display: flex;
+  justify-content: space-around;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.theremin-param {
+  text-align: center;
+}
+
+.param-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.param-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+}
+
 /* Orientation Display */
 .orientation-values {
   display: flex;
