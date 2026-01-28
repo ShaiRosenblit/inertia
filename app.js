@@ -66,7 +66,9 @@
     
     // Orientation
     orientation: { alpha: 0, beta: 0, gamma: 0 },
-    orientationOffset: { alpha: 0, beta: 0, gamma: 0 }
+    orientationOffset: { alpha: 0, beta: 0, gamma: 0 },
+    orientationHistory: [],
+    maxOrientationHistory: 600 // 10 seconds at 60Hz
   };
 
   // ============================================
@@ -141,9 +143,7 @@
     orientPitch: document.getElementById('orient-pitch'),
     orientRoll: document.getElementById('orient-roll'),
     orientYaw: document.getElementById('orient-yaw'),
-    pitchBar: document.getElementById('pitch-bar'),
-    rollBar: document.getElementById('roll-bar'),
-    yawBar: document.getElementById('yaw-bar'),
+    orientationGraph: document.getElementById('orientation-graph'),
     resetOrientation: document.getElementById('reset-orientation'),
     
     // Position integration
@@ -375,37 +375,124 @@
     elements.orientRoll.textContent = roll.toFixed(1) + '°';
     elements.orientYaw.textContent = yaw.toFixed(1) + '°';
     
-    // Helper to update a bar element
-    // percent: -50 to +50, representing left-to-right from center
-    function updateBar(barEl, percent) {
-      const clampedPercent = Math.max(-50, Math.min(50, percent));
-      if (clampedPercent < 0) {
-        // Bar extends left from center
-        barEl.style.marginLeft = (50 + clampedPercent) + '%';
-        barEl.style.width = Math.abs(clampedPercent) + '%';
-      } else {
-        // Bar extends right from center
-        barEl.style.marginLeft = '50%';
-        barEl.style.width = clampedPercent + '%';
-      }
+    // Store history
+    state.orientationHistory.push({
+      time: performance.now(),
+      pitch: pitch,
+      roll: roll,
+      yaw: yaw
+    });
+    
+    // Limit history to last 10 seconds
+    if (state.orientationHistory.length > state.maxOrientationHistory) {
+      state.orientationHistory.shift();
     }
     
-    // Pitch: ±90° maps to ±50%
-    const pitchPercent = (Math.max(-90, Math.min(90, pitch)) / 90) * 50;
-    updateBar(elements.pitchBar, pitchPercent);
+    // Draw graph (throttle to ~20fps for performance)
+    if (state.sampleCount % 3 === 0) {
+      drawOrientationGraph();
+    }
+  }
+  
+  function drawOrientationGraph() {
+    const canvas = elements.orientationGraph;
+    if (!canvas) return;
     
-    // Roll: ±90° maps to ±50%
-    const rollPercent = (Math.max(-90, Math.min(90, roll)) / 90) * 50;
-    updateBar(elements.rollBar, rollPercent);
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
     
-    // Yaw: ±180° maps to ±50%
-    const yawPercent = (Math.max(-180, Math.min(180, yaw)) / 180) * 50;
-    updateBar(elements.yawBar, yawPercent);
+    // Fixed scale: -90° to +90°
+    const minAngle = -90;
+    const maxAngle = 90;
+    const range = maxAngle - minAngle;
+    
+    // Clear
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, width, height);
+    
+    const padding = { left: 35, right: 10, top: 10, bottom: 20 };
+    const graphWidth = width - padding.left - padding.right;
+    const graphHeight = height - padding.top - padding.bottom;
+    
+    // Helper functions
+    const angleToY = (angle) => {
+      const clamped = Math.max(minAngle, Math.min(maxAngle, angle));
+      return padding.top + graphHeight - ((clamped - minAngle) / range) * graphHeight;
+    };
+    
+    // Draw horizontal gridlines
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    [-90, -45, 0, 45, 90].forEach(angle => {
+      const y = angleToY(angle);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+    });
+    
+    // Zero line (bolder)
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, angleToY(0));
+    ctx.lineTo(width - padding.right, angleToY(0));
+    ctx.stroke();
+    
+    // Y-axis labels
+    ctx.fillStyle = '#666';
+    ctx.font = '10px SF Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('+90°', padding.left - 5, angleToY(90) + 3);
+    ctx.fillText('+45°', padding.left - 5, angleToY(45) + 3);
+    ctx.fillText('0°', padding.left - 5, angleToY(0) + 3);
+    ctx.fillText('-45°', padding.left - 5, angleToY(-45) + 3);
+    ctx.fillText('-90°', padding.left - 5, angleToY(-90) + 3);
+    
+    // Time labels
+    ctx.textAlign = 'center';
+    ctx.fillText('10s ago', padding.left + 20, height - 5);
+    ctx.fillText('now', width - padding.right - 10, height - 5);
+    
+    if (state.orientationHistory.length < 2) return;
+    
+    // Draw lines for each angle
+    const colors = {
+      pitch: '#f472b6',
+      roll: '#34d399',
+      yaw: '#60a5fa'
+    };
+    
+    const drawLine = (key, color) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      state.orientationHistory.forEach((point, i) => {
+        const x = padding.left + (i / (state.orientationHistory.length - 1)) * graphWidth;
+        const y = angleToY(point[key]);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      
+      ctx.stroke();
+    };
+    
+    drawLine('pitch', colors.pitch);
+    drawLine('roll', colors.roll);
+    drawLine('yaw', colors.yaw);
   }
   
   function resetOrientationZero() {
     // Set current orientation as the zero point
     state.orientationOffset = { ...state.orientation };
+    // Clear history for fresh start
+    state.orientationHistory = [];
     console.log('Orientation zero set to:', state.orientationOffset);
   }
 

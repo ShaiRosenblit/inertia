@@ -165,33 +165,26 @@
         <h2>Orientation (Stable!) ⭐</h2>
         <p class="hint">Uses gravity as reference - no drift for pitch/roll! Perfect for theremin.</p>
         
-        <div class="orientation-display">
-          <div class="orientation-grid">
-            <div class="orientation-item">
-              <span class="orientation-label">Pitch (β)</span>
-              <span class="orientation-sublabel">tilt forward/back</span>
-              <span id="orient-pitch" class="orientation-value">--°</span>
-              <div class="orientation-bar">
-                <div id="pitch-bar" class="orientation-bar-fill"></div>
-              </div>
-            </div>
-            <div class="orientation-item">
-              <span class="orientation-label">Roll (γ)</span>
-              <span class="orientation-sublabel">tilt left/right</span>
-              <span id="orient-roll" class="orientation-value">--°</span>
-              <div class="orientation-bar">
-                <div id="roll-bar" class="orientation-bar-fill"></div>
-              </div>
-            </div>
-            <div class="orientation-item">
-              <span class="orientation-label">Yaw (α)</span>
-              <span class="orientation-sublabel">compass heading</span>
-              <span id="orient-yaw" class="orientation-value">--°</span>
-              <div class="orientation-bar orientation-bar-yaw">
-                <div id="yaw-bar" class="orientation-bar-fill"></div>
-              </div>
-            </div>
+        <div class="orientation-values">
+          <div class="orientation-value-item">
+            <span class="orientation-color" style="background: #f472b6;"></span>
+            <span class="orientation-label">Pitch</span>
+            <span id="orient-pitch" class="orientation-number">--°</span>
           </div>
+          <div class="orientation-value-item">
+            <span class="orientation-color" style="background: #34d399;"></span>
+            <span class="orientation-label">Roll</span>
+            <span id="orient-roll" class="orientation-number">--°</span>
+          </div>
+          <div class="orientation-value-item">
+            <span class="orientation-color" style="background: #60a5fa;"></span>
+            <span class="orientation-label">Yaw</span>
+            <span id="orient-yaw" class="orientation-number">--°</span>
+          </div>
+        </div>
+        
+        <div class="graph-container">
+          <canvas id="orientation-graph" width="400" height="200"></canvas>
         </div>
         
         <button id="reset-orientation" class="btn-secondary">Set Current as Zero</button>
@@ -304,7 +297,7 @@
 
     <footer>
       <p>Inertia IMU Diagnostics • <a href="https://github.com/ShaiRosenblit/inertia">GitHub</a></p>
-      <p class="version">Build: 2026-01-28 14:33 IST</p>
+      <p class="version">Build: 2026-01-28 14:41 IST</p>
     </footer>
   </div>
 

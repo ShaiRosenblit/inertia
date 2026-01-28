@@ -153,75 +153,38 @@ header h1 {
 
 /* Status Grid */
 /* Orientation Display */
-.orientation-display {
-  margin-bottom: 16px;
-}
-
-.orientation-grid {
+.orientation-values {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.orientation-item {
+  justify-content: space-around;
+  margin-bottom: 16px;
   background: var(--bg-primary);
   border-radius: var(--radius-sm);
   padding: 12px;
 }
 
+.orientation-value-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orientation-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
 .orientation-label {
-  display: block;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.orientation-number {
+  font-family: var(--font-mono);
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.orientation-sublabel {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.orientation-value {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent-secondary);
-  margin-bottom: 8px;
-}
-
-.orientation-bar {
-  height: 8px;
-  background: var(--bg-card);
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.orientation-bar::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--text-muted);
-  transform: translateX(-50%);
-}
-
-.orientation-bar-fill {
-  height: 100%;
-  background: var(--accent-primary);
-  border-radius: 4px;
-  transition: width 0.05s ease, margin-left 0.05s ease;
-  width: 4px;
-  margin-left: 50%;
-}
-
-.orientation-bar-yaw .orientation-bar-fill {
-  background: var(--accent-warning);
+  min-width: 60px;
 }
 
 /* Lock Controls */
