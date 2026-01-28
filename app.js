@@ -242,7 +242,12 @@
     document.getElementById('exit-fullscreen').addEventListener('click', exitFullscreen);
     
     // Theremin controls
-    elements.thereminToggle.addEventListener('click', toggleTheremin);
+    if (elements.thereminToggle) {
+      elements.thereminToggle.addEventListener('click', toggleTheremin);
+      console.log('Theremin toggle listener attached');
+    } else {
+      console.error('Theremin toggle button not found!');
+    }
     
     // Orientation controls
     elements.resetOrientation.addEventListener('click', resetOrientationZero);
@@ -684,6 +689,7 @@
   // ============================================
   
   function toggleTheremin() {
+    console.log('toggleTheremin called, playing:', state.thereminPlaying);
     if (state.thereminPlaying) {
       stopTheremin();
     } else {
@@ -692,13 +698,18 @@
   }
   
   function startTheremin() {
+    console.log('startTheremin called');
+    
     // Initialize audio context if needed
     initAudio();
     
     if (!state.audioContext) {
-      alert('Audio not available');
+      console.error('AudioContext not available');
+      alert('Audio not available. Please try again.');
       return;
     }
+    
+    console.log('AudioContext state:', state.audioContext.state);
     
     const ctx = state.audioContext;
     
