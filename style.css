@@ -447,6 +447,13 @@ footer a:hover {
   color: var(--accent-primary);
 }
 
+.version {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
 /* Utility */
 .hidden {
   display: none !important;
