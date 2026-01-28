@@ -160,6 +160,47 @@
         </div>
       </section>
 
+      <!-- Position Integration -->
+      <section class="card">
+        <h2>Position Integration (Experimental)</h2>
+        <p class="hint">Double-integrates acceleration to estimate position. Press Reset, move phone, see trajectory. Warning: drifts quickly!</p>
+        
+        <div class="integration-controls">
+          <button id="reset-integration" class="btn-primary">🔄 Reset Position</button>
+          <label class="checkbox-label">
+            <input type="checkbox" id="integration-active" checked>
+            Integration Active
+          </label>
+        </div>
+        
+        <div class="position-display">
+          <div class="position-grid">
+            <div class="position-item">
+              <span class="position-label">X</span>
+              <span id="pos-x" class="position-value">0.00 m</span>
+            </div>
+            <div class="position-item">
+              <span class="position-label">Y</span>
+              <span id="pos-y" class="position-value">0.00 m</span>
+            </div>
+            <div class="position-item">
+              <span class="position-label">Z (Height)</span>
+              <span id="pos-z" class="position-value">0.00 m</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="graph-container">
+          <h3>Height (Z) Over Time</h3>
+          <canvas id="height-graph" width="400" height="150"></canvas>
+        </div>
+        
+        <div class="graph-container">
+          <h3>XY Position (Top View)</h3>
+          <canvas id="xy-graph" width="300" height="300"></canvas>
+        </div>
+      </section>
+
       <!-- Noise Analysis (when stationary) -->
       <section class="card">
         <h2>Noise Analysis</h2>
@@ -221,7 +262,7 @@
 
     <footer>
       <p>Inertia IMU Diagnostics • <a href="https://github.com/ShaiRosenblit/inertia">GitHub</a></p>
-      <p class="version">Build: 2026-01-28 13:00 IST</p>
+      <p class="version">Build: 2026-01-28 13:04 IST</p>
     </footer>
   </div>
 

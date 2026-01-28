@@ -48,7 +48,19 @@
     
     // Audio
     audioContext: null,
-    audioEnabled: true
+    audioEnabled: true,
+    
+    // Position integration
+    integrationActive: true,
+    velocity: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+    lastIntegrationTime: null,
+    gravityEstimate: { x: 0, y: 0, z: 9.81 }, // Will be calibrated
+    
+    // Position history for graphs
+    heightHistory: [],
+    xyHistory: [],
+    maxHistoryLength: 200
   };
 
   // ============================================
@@ -117,7 +129,16 @@
     latencyMin: document.getElementById('latency-min'),
     latencyMax: document.getElementById('latency-max'),
     latencyTapCount: document.getElementById('latency-tap-count'),
-    resetLatency: document.getElementById('reset-latency')
+    resetLatency: document.getElementById('reset-latency'),
+    
+    // Position integration
+    resetIntegration: document.getElementById('reset-integration'),
+    integrationActive: document.getElementById('integration-active'),
+    posX: document.getElementById('pos-x'),
+    posY: document.getElementById('pos-y'),
+    posZ: document.getElementById('pos-z'),
+    heightGraph: document.getElementById('height-graph'),
+    xyGraph: document.getElementById('xy-graph')
   };
   
   // Set child elements after main element exists
@@ -189,6 +210,12 @@
     // Screen lock controls
     document.getElementById('lock-portrait').addEventListener('click', lockPortrait);
     document.getElementById('exit-fullscreen').addEventListener('click', exitFullscreen);
+    
+    // Position integration controls
+    elements.resetIntegration.addEventListener('click', resetIntegration);
+    elements.integrationActive.addEventListener('change', (e) => {
+      state.integrationActive = e.target.checked;
+    });
     
     // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', updateFullscreenUI);
@@ -383,6 +410,11 @@
     
     // Latency detection
     checkLatencySpike(data);
+    
+    // Position integration
+    if (state.integrationActive) {
+      integratePosition(data);
+    }
   }
 
   // ============================================
@@ -694,6 +726,248 @@
     elements.latencyTargetSub.textContent = 'Hold phone, tap firmly';
     elements.latencyStatus.textContent = '';
     elements.latencyStatus.className = 'latency-status';
+  }
+
+  // ============================================
+  // Position Integration
+  // ============================================
+  
+  function resetIntegration() {
+    // Reset position and velocity
+    state.velocity = { x: 0, y: 0, z: 0 };
+    state.position = { x: 0, y: 0, z: 0 };
+    state.lastIntegrationTime = null;
+    
+    // Clear history
+    state.heightHistory = [];
+    state.xyHistory = [];
+    
+    // Calibrate gravity using current acceleration reading
+    // Assumes phone is stationary when reset is pressed
+    state.gravityEstimate = { ...state.lastAccel };
+    
+    // Update display
+    updatePositionDisplay();
+    drawHeightGraph();
+    drawXYGraph();
+    
+    console.log('Integration reset. Gravity calibrated to:', state.gravityEstimate);
+  }
+  
+  function integratePosition(data) {
+    const now = data.timestamp;
+    
+    // Need at least two samples to integrate
+    if (state.lastIntegrationTime === null) {
+      state.lastIntegrationTime = now;
+      return;
+    }
+    
+    // Calculate dt in seconds
+    const dt = (now - state.lastIntegrationTime) / 1000;
+    state.lastIntegrationTime = now;
+    
+    // Skip if dt is too large (probably a gap in data)
+    if (dt > 0.1 || dt <= 0) return;
+    
+    // Get acceleration and subtract gravity estimate
+    const accel = {
+      x: (state.lastAccel.x || 0) - state.gravityEstimate.x,
+      y: (state.lastAccel.y || 0) - state.gravityEstimate.y,
+      z: (state.lastAccel.z || 0) - state.gravityEstimate.z
+    };
+    
+    // Simple Euler integration: v = v + a*dt
+    state.velocity.x += accel.x * dt;
+    state.velocity.y += accel.y * dt;
+    state.velocity.z += accel.z * dt;
+    
+    // Position: p = p + v*dt
+    state.position.x += state.velocity.x * dt;
+    state.position.y += state.velocity.y * dt;
+    state.position.z += state.velocity.z * dt;
+    
+    // Store history for graphs
+    state.heightHistory.push({
+      time: now,
+      z: state.position.z
+    });
+    
+    state.xyHistory.push({
+      x: state.position.x,
+      y: state.position.y
+    });
+    
+    // Limit history length
+    if (state.heightHistory.length > state.maxHistoryLength) {
+      state.heightHistory.shift();
+    }
+    if (state.xyHistory.length > state.maxHistoryLength) {
+      state.xyHistory.shift();
+    }
+    
+    // Update display (throttle to ~10fps for performance)
+    if (state.sampleCount % 6 === 0) {
+      updatePositionDisplay();
+      drawHeightGraph();
+      drawXYGraph();
+    }
+  }
+  
+  function updatePositionDisplay() {
+    elements.posX.textContent = state.position.x.toFixed(3) + ' m';
+    elements.posY.textContent = state.position.y.toFixed(3) + ' m';
+    elements.posZ.textContent = state.position.z.toFixed(3) + ' m';
+  }
+  
+  function drawHeightGraph() {
+    const canvas = elements.heightGraph;
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, width, height);
+    
+    if (state.heightHistory.length < 2) return;
+    
+    // Find range
+    const zValues = state.heightHistory.map(h => h.z);
+    let minZ = Math.min(...zValues);
+    let maxZ = Math.max(...zValues);
+    
+    // Ensure some range
+    if (maxZ - minZ < 0.01) {
+      minZ -= 0.05;
+      maxZ += 0.05;
+    }
+    
+    const padding = 10;
+    const graphWidth = width - padding * 2;
+    const graphHeight = height - padding * 2;
+    
+    // Draw zero line
+    const zeroY = padding + graphHeight - ((0 - minZ) / (maxZ - minZ)) * graphHeight;
+    ctx.strokeStyle = '#333';
+    ctx.beginPath();
+    ctx.moveTo(padding, zeroY);
+    ctx.lineTo(width - padding, zeroY);
+    ctx.stroke();
+    
+    // Draw height line
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    state.heightHistory.forEach((point, i) => {
+      const x = padding + (i / (state.heightHistory.length - 1)) * graphWidth;
+      const y = padding + graphHeight - ((point.z - minZ) / (maxZ - minZ)) * graphHeight;
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.stroke();
+    
+    // Draw current value label
+    ctx.fillStyle = '#e8e8f0';
+    ctx.font = '12px SF Mono, monospace';
+    ctx.fillText(`Z: ${state.position.z.toFixed(3)}m`, padding + 5, padding + 15);
+    ctx.fillStyle = '#888';
+    ctx.fillText(`Range: ${minZ.toFixed(2)} to ${maxZ.toFixed(2)}m`, padding + 5, height - padding - 5);
+  }
+  
+  function drawXYGraph() {
+    const canvas = elements.xyGraph;
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width; // Assuming square
+    
+    // Clear
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, size, size);
+    
+    if (state.xyHistory.length < 2) {
+      // Draw crosshair at center
+      ctx.strokeStyle = '#333';
+      ctx.beginPath();
+      ctx.moveTo(size/2, 0);
+      ctx.lineTo(size/2, size);
+      ctx.moveTo(0, size/2);
+      ctx.lineTo(size, size/2);
+      ctx.stroke();
+      return;
+    }
+    
+    // Find range (make it square and centered on origin)
+    const xValues = state.xyHistory.map(h => h.x);
+    const yValues = state.xyHistory.map(h => h.y);
+    const maxRange = Math.max(
+      Math.abs(Math.min(...xValues)),
+      Math.abs(Math.max(...xValues)),
+      Math.abs(Math.min(...yValues)),
+      Math.abs(Math.max(...yValues)),
+      0.1 // Minimum range
+    ) * 1.2; // Add margin
+    
+    const padding = 20;
+    const graphSize = size - padding * 2;
+    
+    // Helper to convert position to canvas coords
+    const toCanvasX = (x) => padding + ((x + maxRange) / (maxRange * 2)) * graphSize;
+    const toCanvasY = (y) => padding + graphSize - ((y + maxRange) / (maxRange * 2)) * graphSize;
+    
+    // Draw grid
+    ctx.strokeStyle = '#333';
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(0), padding);
+    ctx.lineTo(toCanvasX(0), size - padding);
+    ctx.moveTo(padding, toCanvasY(0));
+    ctx.lineTo(size - padding, toCanvasY(0));
+    ctx.stroke();
+    
+    // Draw path
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    state.xyHistory.forEach((point, i) => {
+      const x = toCanvasX(point.x);
+      const y = toCanvasY(point.y);
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.stroke();
+    
+    // Draw current position dot
+    const currentX = toCanvasX(state.position.x);
+    const currentY = toCanvasY(state.position.y);
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw origin dot
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.arc(toCanvasX(0), toCanvasY(0), 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Labels
+    ctx.fillStyle = '#e8e8f0';
+    ctx.font = '12px SF Mono, monospace';
+    ctx.fillText(`X: ${state.position.x.toFixed(3)}m`, padding + 5, padding + 15);
+    ctx.fillText(`Y: ${state.position.y.toFixed(3)}m`, padding + 5, padding + 30);
+    ctx.fillStyle = '#888';
+    ctx.fillText(`±${maxRange.toFixed(2)}m`, size - padding - 50, size - padding - 5);
   }
 
   // ============================================
