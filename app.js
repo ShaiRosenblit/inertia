@@ -178,6 +178,13 @@
     elements.latencyTarget.addEventListener('touchstart', handleLatencyTap, { passive: true });
     elements.latencyTarget.addEventListener('mousedown', handleLatencyTap);
     elements.resetLatency.addEventListener('click', resetLatencyTest);
+    
+    // Test sound button
+    document.getElementById('test-sound').addEventListener('click', () => {
+      initAudio();
+      playClick();
+      console.log('Test sound triggered');
+    });
   }
 
   // ============================================
@@ -447,36 +454,62 @@
   function initAudio() {
     // Create audio context on first user interaction (required by browsers)
     if (!state.audioContext) {
-      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      try {
+        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('AudioContext created, state:', state.audioContext.state);
+      } catch (e) {
+        console.error('Failed to create AudioContext:', e);
+        return;
+      }
     }
     // Resume if suspended (iOS requires this)
     if (state.audioContext.state === 'suspended') {
-      state.audioContext.resume();
+      state.audioContext.resume().then(() => {
+        console.log('AudioContext resumed');
+      });
     }
   }
   
   function playClick() {
-    if (!state.audioEnabled || !state.audioContext) return;
+    if (!state.audioEnabled) return;
+    
+    // Make sure audio is initialized
+    if (!state.audioContext) {
+      initAudio();
+    }
+    
+    if (!state.audioContext) {
+      console.error('No AudioContext available');
+      return;
+    }
+    
+    // Resume if needed (belt and suspenders)
+    if (state.audioContext.state === 'suspended') {
+      state.audioContext.resume();
+    }
     
     const ctx = state.audioContext;
     const now = ctx.currentTime;
     
-    // Create a short click/pop sound
+    console.log('Playing click at', now, 'context state:', ctx.state);
+    
+    // Create a louder, longer click sound
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
     
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
     
-    // Short, punchy click - starts loud, fades fast
-    oscillator.frequency.setValueAtTime(800, now);
-    oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+    // Make it more audible - louder and slightly longer
+    oscillator.type = 'square'; // Square wave is more audible
+    oscillator.frequency.setValueAtTime(1000, now);
+    oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.1);
     
-    gainNode.gain.setValueAtTime(0.3, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    gainNode.gain.setValueAtTime(0.5, now); // Louder
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     
     oscillator.start(now);
-    oscillator.stop(now + 0.05);
+    oscillator.stop(now + 0.1);
   }
 
   // ============================================
