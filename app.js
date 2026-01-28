@@ -62,7 +62,11 @@
     // Position history for graphs
     heightHistory: [],
     xyHistory: [],
-    maxHistoryLength: 200
+    maxHistoryLength: 200,
+    
+    // Orientation
+    orientation: { alpha: 0, beta: 0, gamma: 0 },
+    orientationOffset: { alpha: 0, beta: 0, gamma: 0 }
   };
 
   // ============================================
@@ -132,6 +136,15 @@
     latencyMax: document.getElementById('latency-max'),
     latencyTapCount: document.getElementById('latency-tap-count'),
     resetLatency: document.getElementById('reset-latency'),
+    
+    // Orientation
+    orientPitch: document.getElementById('orient-pitch'),
+    orientRoll: document.getElementById('orient-roll'),
+    orientYaw: document.getElementById('orient-yaw'),
+    pitchBar: document.getElementById('pitch-bar'),
+    rollBar: document.getElementById('roll-bar'),
+    yawBar: document.getElementById('yaw-bar'),
+    resetOrientation: document.getElementById('reset-orientation'),
     
     // Position integration
     resetIntegration: document.getElementById('reset-integration'),
@@ -212,6 +225,9 @@
     // Screen lock controls
     document.getElementById('lock-portrait').addEventListener('click', lockPortrait);
     document.getElementById('exit-fullscreen').addEventListener('click', exitFullscreen);
+    
+    // Orientation controls
+    elements.resetOrientation.addEventListener('click', resetOrientationZero);
     
     // Position integration controls
     elements.resetIntegration.addEventListener('click', resetIntegration);
@@ -324,9 +340,76 @@
     // Use passive: true to hint browser this won't block scrolling
     window.addEventListener('devicemotion', handleDeviceMotion, { passive: true, capture: false });
     
+    // Also listen to orientation events
+    window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true, capture: false });
+    
     elements.sensorStatus.textContent = 'DeviceMotion API';
     elements.sensorStatus.style.color = 'var(--accent-warning)';
     state.startTime = performance.now();
+  }
+  
+  function handleDeviceOrientation(event) {
+    // Store raw orientation
+    state.orientation = {
+      alpha: event.alpha || 0,  // Yaw (0-360)
+      beta: event.beta || 0,    // Pitch (-180 to 180)
+      gamma: event.gamma || 0   // Roll (-90 to 90)
+    };
+    
+    // Apply offset to get relative orientation
+    const pitch = state.orientation.beta - state.orientationOffset.beta;
+    const roll = state.orientation.gamma - state.orientationOffset.gamma;
+    let yaw = state.orientation.alpha - state.orientationOffset.alpha;
+    
+    // Normalize yaw to -180 to 180
+    while (yaw > 180) yaw -= 360;
+    while (yaw < -180) yaw += 360;
+    
+    // Update display
+    updateOrientationDisplay(pitch, roll, yaw);
+  }
+  
+  function updateOrientationDisplay(pitch, roll, yaw) {
+    // Update text values
+    elements.orientPitch.textContent = pitch.toFixed(1) + '°';
+    elements.orientRoll.textContent = roll.toFixed(1) + '°';
+    elements.orientYaw.textContent = yaw.toFixed(1) + '°';
+    
+    // Update bars (pitch and roll: -90 to 90 mapped to 0-100%)
+    // Bar shows deviation from center
+    const pitchPercent = Math.max(-90, Math.min(90, pitch)) / 90 * 50; // -50 to 50
+    elements.pitchBar.style.marginLeft = (50 + pitchPercent) + '%';
+    elements.pitchBar.style.width = Math.abs(pitchPercent) + '%';
+    if (pitchPercent < 0) {
+      elements.pitchBar.style.marginLeft = (50 + pitchPercent) + '%';
+    } else {
+      elements.pitchBar.style.marginLeft = '50%';
+    }
+    
+    const rollPercent = Math.max(-90, Math.min(90, roll)) / 90 * 50;
+    elements.rollBar.style.marginLeft = (50 + Math.min(0, rollPercent)) + '%';
+    elements.rollBar.style.width = Math.abs(rollPercent) + '%';
+    if (rollPercent < 0) {
+      elements.rollBar.style.marginLeft = (50 + rollPercent) + '%';
+    } else {
+      elements.rollBar.style.marginLeft = '50%';
+    }
+    
+    // Yaw bar: -180 to 180 mapped to full width
+    const yawPercent = Math.max(-180, Math.min(180, yaw)) / 180 * 50;
+    elements.yawBar.style.marginLeft = (50 + Math.min(0, yawPercent)) + '%';
+    elements.yawBar.style.width = Math.abs(yawPercent) + '%';
+    if (yawPercent < 0) {
+      elements.yawBar.style.marginLeft = (50 + yawPercent) + '%';
+    } else {
+      elements.yawBar.style.marginLeft = '50%';
+    }
+  }
+  
+  function resetOrientationZero() {
+    // Set current orientation as the zero point
+    state.orientationOffset = { ...state.orientation };
+    console.log('Orientation zero set to:', state.orientationOffset);
   }
 
   function handleDeviceMotion(event) {
