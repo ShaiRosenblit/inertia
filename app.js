@@ -826,59 +826,83 @@
     const width = canvas.width;
     const height = canvas.height;
     
+    // Fixed scale: -0.5m to +0.5m
+    const minZ = -0.5;
+    const maxZ = 0.5;
+    const range = maxZ - minZ;
+    
     // Clear
     ctx.fillStyle = '#0a0a0f';
     ctx.fillRect(0, 0, width, height);
     
-    if (state.heightHistory.length < 2) return;
-    
-    // Find range
-    const zValues = state.heightHistory.map(h => h.z);
-    let minZ = Math.min(...zValues);
-    let maxZ = Math.max(...zValues);
-    
-    // Ensure some range
-    if (maxZ - minZ < 0.01) {
-      minZ -= 0.05;
-      maxZ += 0.05;
-    }
-    
-    const padding = 10;
+    const padding = 30; // More padding for labels
     const graphWidth = width - padding * 2;
     const graphHeight = height - padding * 2;
     
-    // Draw zero line
-    const zeroY = padding + graphHeight - ((0 - minZ) / (maxZ - minZ)) * graphHeight;
-    ctx.strokeStyle = '#333';
-    ctx.beginPath();
-    ctx.moveTo(padding, zeroY);
-    ctx.lineTo(width - padding, zeroY);
-    ctx.stroke();
+    // Helper function
+    const zToY = (z) => {
+      const clamped = Math.max(minZ, Math.min(maxZ, z));
+      return padding + graphHeight - ((clamped - minZ) / range) * graphHeight;
+    };
     
-    // Draw height line
-    ctx.strokeStyle = '#60a5fa';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    state.heightHistory.forEach((point, i) => {
-      const x = padding + (i / (state.heightHistory.length - 1)) * graphWidth;
-      const y = padding + graphHeight - ((point.z - minZ) / (maxZ - minZ)) * graphHeight;
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    // Draw horizontal gridlines at 0.25m intervals
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    [-0.5, -0.25, 0, 0.25, 0.5].forEach(z => {
+      const y = zToY(z);
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
     });
     
+    // Draw zero line (bolder)
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, zToY(0));
+    ctx.lineTo(width - padding, zToY(0));
     ctx.stroke();
     
-    // Draw current value label
+    // Draw Y-axis labels
+    ctx.fillStyle = '#666';
+    ctx.font = '10px SF Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('+0.5m', padding - 5, zToY(0.5) + 3);
+    ctx.fillText('+0.25', padding - 5, zToY(0.25) + 3);
+    ctx.fillText('0', padding - 5, zToY(0) + 3);
+    ctx.fillText('-0.25', padding - 5, zToY(-0.25) + 3);
+    ctx.fillText('-0.5m', padding - 5, zToY(-0.5) + 3);
+    ctx.textAlign = 'left';
+    
+    // Draw height line
+    if (state.heightHistory.length >= 2) {
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      state.heightHistory.forEach((point, i) => {
+        const x = padding + (i / (state.heightHistory.length - 1)) * graphWidth;
+        const y = zToY(point.z);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      
+      ctx.stroke();
+    }
+    
+    // Draw current value label (top right)
     ctx.fillStyle = '#e8e8f0';
     ctx.font = '12px SF Mono, monospace';
-    ctx.fillText(`Z: ${state.position.z.toFixed(3)}m`, padding + 5, padding + 15);
-    ctx.fillStyle = '#888';
-    ctx.fillText(`Range: ${minZ.toFixed(2)} to ${maxZ.toFixed(2)}m`, padding + 5, height - padding - 5);
+    ctx.textAlign = 'right';
+    const currentZ = state.position.z;
+    const clampNote = (currentZ > maxZ || currentZ < minZ) ? ' (clipped)' : '';
+    ctx.fillText(`Z: ${currentZ.toFixed(3)}m${clampNote}`, width - padding, padding + 15);
+    ctx.textAlign = 'left';
   }
   
   function drawXYGraph() {
@@ -886,42 +910,45 @@
     const ctx = canvas.getContext('2d');
     const size = canvas.width; // Assuming square
     
+    // Fixed scale: ±0.5 meters
+    const maxRange = 0.5;
+    
     // Clear
     ctx.fillStyle = '#0a0a0f';
     ctx.fillRect(0, 0, size, size);
     
-    if (state.xyHistory.length < 2) {
-      // Draw crosshair at center
-      ctx.strokeStyle = '#333';
-      ctx.beginPath();
-      ctx.moveTo(size/2, 0);
-      ctx.lineTo(size/2, size);
-      ctx.moveTo(0, size/2);
-      ctx.lineTo(size, size/2);
-      ctx.stroke();
-      return;
-    }
-    
-    // Find range (make it square and centered on origin)
-    const xValues = state.xyHistory.map(h => h.x);
-    const yValues = state.xyHistory.map(h => h.y);
-    const maxRange = Math.max(
-      Math.abs(Math.min(...xValues)),
-      Math.abs(Math.max(...xValues)),
-      Math.abs(Math.min(...yValues)),
-      Math.abs(Math.max(...yValues)),
-      0.1 // Minimum range
-    ) * 1.2; // Add margin
-    
-    const padding = 20;
+    const padding = 30;
     const graphSize = size - padding * 2;
     
-    // Helper to convert position to canvas coords
-    const toCanvasX = (x) => padding + ((x + maxRange) / (maxRange * 2)) * graphSize;
-    const toCanvasY = (y) => padding + graphSize - ((y + maxRange) / (maxRange * 2)) * graphSize;
+    // Helper to convert position to canvas coords (clamp to range)
+    const toCanvasX = (x) => {
+      const clamped = Math.max(-maxRange, Math.min(maxRange, x));
+      return padding + ((clamped + maxRange) / (maxRange * 2)) * graphSize;
+    };
+    const toCanvasY = (y) => {
+      const clamped = Math.max(-maxRange, Math.min(maxRange, y));
+      return padding + graphSize - ((clamped + maxRange) / (maxRange * 2)) * graphSize;
+    };
     
-    // Draw grid
-    ctx.strokeStyle = '#333';
+    // Draw gridlines at 0.25m intervals
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    [-0.5, -0.25, 0.25, 0.5].forEach(v => {
+      // Vertical lines
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(v), padding);
+      ctx.lineTo(toCanvasX(v), size - padding);
+      ctx.stroke();
+      // Horizontal lines
+      ctx.beginPath();
+      ctx.moveTo(padding, toCanvasY(v));
+      ctx.lineTo(size - padding, toCanvasY(v));
+      ctx.stroke();
+    });
+    
+    // Draw axes (bolder)
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(toCanvasX(0), padding);
     ctx.lineTo(toCanvasX(0), size - padding);
@@ -929,23 +956,37 @@
     ctx.lineTo(size - padding, toCanvasY(0));
     ctx.stroke();
     
+    // Axis labels
+    ctx.fillStyle = '#666';
+    ctx.font = '10px SF Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('-0.5m', toCanvasX(-0.5), size - padding + 12);
+    ctx.fillText('0', toCanvasX(0), size - padding + 12);
+    ctx.fillText('+0.5m', toCanvasX(0.5), size - padding + 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('+0.5m', padding - 5, toCanvasY(0.5) + 3);
+    ctx.fillText('0', padding - 5, toCanvasY(0) + 3);
+    ctx.fillText('-0.5m', padding - 5, toCanvasY(-0.5) + 3);
+    
     // Draw path
-    ctx.strokeStyle = '#34d399';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    state.xyHistory.forEach((point, i) => {
-      const x = toCanvasX(point.x);
-      const y = toCanvasY(point.y);
+    if (state.xyHistory.length >= 2) {
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
       
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    
-    ctx.stroke();
+      state.xyHistory.forEach((point, i) => {
+        const x = toCanvasX(point.x);
+        const y = toCanvasY(point.y);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      
+      ctx.stroke();
+    }
     
     // Draw current position dot
     const currentX = toCanvasX(state.position.x);
@@ -961,13 +1002,14 @@
     ctx.arc(toCanvasX(0), toCanvasY(0), 4, 0, Math.PI * 2);
     ctx.fill();
     
-    // Labels
+    // Current position labels (top left)
     ctx.fillStyle = '#e8e8f0';
     ctx.font = '12px SF Mono, monospace';
-    ctx.fillText(`X: ${state.position.x.toFixed(3)}m`, padding + 5, padding + 15);
-    ctx.fillText(`Y: ${state.position.y.toFixed(3)}m`, padding + 5, padding + 30);
-    ctx.fillStyle = '#888';
-    ctx.fillText(`±${maxRange.toFixed(2)}m`, size - padding - 50, size - padding - 5);
+    ctx.textAlign = 'left';
+    const xClip = (Math.abs(state.position.x) > maxRange) ? '!' : '';
+    const yClip = (Math.abs(state.position.y) > maxRange) ? '!' : '';
+    ctx.fillText(`X: ${state.position.x.toFixed(3)}m${xClip}`, padding + 5, padding + 15);
+    ctx.fillText(`Y: ${state.position.y.toFixed(3)}m${yClip}`, padding + 5, padding + 30);
   }
 
   // ============================================
