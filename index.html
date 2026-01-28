@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Inertia - IMU Diagnostics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Inertia</h1>
+      <p class="subtitle">IMU Sensor Diagnostics</p>
+    </header>
+
+    <!-- Permission Gate -->
+    <section id="permission-gate" class="card">
+      <h2>Sensor Access Required</h2>
+      <p>iOS requires explicit permission to access motion sensors. Tap the button below to enable.</p>
+      <button id="request-permission" class="btn-primary">Enable Motion Sensors</button>
+      <p id="permission-status" class="status"></p>
+    </section>
+
+    <!-- Main Dashboard (hidden until permission granted) -->
+    <main id="dashboard" class="hidden">
+      
+      <!-- Status Bar -->
+      <section class="card status-card">
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">Status</span>
+            <span id="sensor-status" class="status-value">Initializing...</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Sample Rate</span>
+            <span id="sample-rate" class="status-value">-- Hz</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Samples</span>
+            <span id="sample-count" class="status-value">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Accelerometer Data -->
+      <section class="card">
+        <h2>Accelerometer <span class="unit">(m/s²)</span></h2>
+        <div class="sensor-grid">
+          <div class="sensor-axis">
+            <span class="axis-label">X</span>
+            <span id="accel-x" class="axis-value">--</span>
+          </div>
+          <div class="sensor-axis">
+            <span class="axis-label">Y</span>
+            <span id="accel-y" class="axis-value">--</span>
+          </div>
+          <div class="sensor-axis">
+            <span class="axis-label">Z</span>
+            <span id="accel-z" class="axis-value">--</span>
+          </div>
+        </div>
+        <div class="sensor-meta">
+          <span>Magnitude: <span id="accel-mag">--</span></span>
+        </div>
+      </section>
+
+      <!-- Gyroscope Data -->
+      <section class="card">
+        <h2>Gyroscope <span class="unit">(rad/s)</span></h2>
+        <div class="sensor-grid">
+          <div class="sensor-axis">
+            <span class="axis-label">α</span>
+            <span id="gyro-alpha" class="axis-value">--</span>
+          </div>
+          <div class="sensor-axis">
+            <span class="axis-label">β</span>
+            <span id="gyro-beta" class="axis-value">--</span>
+          </div>
+          <div class="sensor-axis">
+            <span class="axis-label">γ</span>
+            <span id="gyro-gamma" class="axis-value">--</span>
+          </div>
+        </div>
+        <div class="sensor-meta">
+          <span>Magnitude: <span id="gyro-mag">--</span></span>
+        </div>
+      </section>
+
+      <!-- Timing Analysis -->
+      <section class="card">
+        <h2>Timing Analysis</h2>
+        <div class="timing-grid">
+          <div class="timing-item">
+            <span class="timing-label">Interval (reported)</span>
+            <span id="interval-reported" class="timing-value">-- ms</span>
+          </div>
+          <div class="timing-item">
+            <span class="timing-label">Interval (measured)</span>
+            <span id="interval-measured" class="timing-value">-- ms</span>
+          </div>
+          <div class="timing-item">
+            <span class="timing-label">Jitter (std dev)</span>
+            <span id="interval-jitter" class="timing-value">-- ms</span>
+          </div>
+          <div class="timing-item">
+            <span class="timing-label">Min / Max</span>
+            <span id="interval-minmax" class="timing-value">-- / -- ms</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Noise Analysis (when stationary) -->
+      <section class="card">
+        <h2>Noise Analysis</h2>
+        <p class="hint">Place phone flat and still for accurate readings</p>
+        <button id="measure-noise" class="btn-secondary">Measure Noise (3s)</button>
+        <div id="noise-results" class="noise-results hidden">
+          <div class="noise-grid">
+            <div class="noise-item">
+              <span class="noise-label">Accel Noise (σ)</span>
+              <span id="accel-noise" class="noise-value">--</span>
+            </div>
+            <div class="noise-item">
+              <span class="noise-label">Gyro Noise (σ)</span>
+              <span id="gyro-noise" class="noise-value">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recording Controls -->
+      <section class="card">
+        <h2>Recording</h2>
+        <div class="recording-controls">
+          <button id="start-recording" class="btn-primary">Start Recording</button>
+          <button id="stop-recording" class="btn-secondary hidden">Stop Recording</button>
+          <button id="export-csv" class="btn-secondary hidden">Export CSV</button>
+          <button id="export-json" class="btn-secondary hidden">Export JSON</button>
+        </div>
+        <div id="recording-status" class="recording-status hidden">
+          <span class="recording-indicator"></span>
+          <span>Recording: <span id="recording-count">0</span> samples</span>
+        </div>
+      </section>
+
+      <!-- API Info -->
+      <section class="card">
+        <h2>API Information</h2>
+        <div class="api-info">
+          <div class="api-item">
+            <span class="api-label">DeviceMotionEvent</span>
+            <span id="api-devicemotion" class="api-value">--</span>
+          </div>
+          <div class="api-item">
+            <span class="api-label">DeviceOrientationEvent</span>
+            <span id="api-deviceorientation" class="api-value">--</span>
+          </div>
+          <div class="api-item">
+            <span class="api-label">Generic Sensor API</span>
+            <span id="api-genericsensor" class="api-value">--</span>
+          </div>
+          <div class="api-item">
+            <span class="api-label">User Agent</span>
+            <span id="api-useragent" class="api-value api-useragent">--</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <p>Inertia IMU Diagnostics • <a href="https://github.com/anthropics/inertia">GitHub</a></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
