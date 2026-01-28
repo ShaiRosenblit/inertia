@@ -56,6 +56,8 @@
     position: { x: 0, y: 0, z: 0 },
     lastIntegrationTime: null,
     gravityEstimate: { x: 0, y: 0, z: 9.81 }, // Will be calibrated
+    isCalibrating: false,
+    calibrationSamples: [],
     
     // Position history for graphs
     heightHistory: [],
@@ -742,19 +744,69 @@
     state.heightHistory = [];
     state.xyHistory = [];
     
-    // Calibrate gravity using current acceleration reading
-    // Assumes phone is stationary when reset is pressed
-    state.gravityEstimate = { ...state.lastAccel };
+    // Start gravity calibration - collect samples for 0.5 seconds
+    state.isCalibrating = true;
+    state.calibrationSamples = [];
+    
+    // Update button to show calibrating
+    elements.resetIntegration.textContent = '⏳ Calibrating...';
+    elements.resetIntegration.disabled = true;
+    
+    setTimeout(() => {
+      finishCalibration();
+    }, 500);
+  }
+  
+  function finishCalibration() {
+    state.isCalibrating = false;
+    
+    if (state.calibrationSamples.length > 0) {
+      // Average all samples to get gravity estimate
+      const sum = state.calibrationSamples.reduce((acc, s) => ({
+        x: acc.x + s.x,
+        y: acc.y + s.y,
+        z: acc.z + s.z
+      }), { x: 0, y: 0, z: 0 });
+      
+      state.gravityEstimate = {
+        x: sum.x / state.calibrationSamples.length,
+        y: sum.y / state.calibrationSamples.length,
+        z: sum.z / state.calibrationSamples.length
+      };
+      
+      const mag = Math.sqrt(
+        state.gravityEstimate.x ** 2 +
+        state.gravityEstimate.y ** 2 +
+        state.gravityEstimate.z ** 2
+      );
+      
+      console.log(`Gravity calibrated from ${state.calibrationSamples.length} samples:`, state.gravityEstimate);
+      console.log(`Gravity magnitude: ${mag.toFixed(3)} m/s² (expected ~9.81)`);
+      
+      // Update gravity display
+      const gravityDisplay = document.getElementById('gravity-values');
+      if (gravityDisplay) {
+        gravityDisplay.textContent = `X:${state.gravityEstimate.x.toFixed(2)} Y:${state.gravityEstimate.y.toFixed(2)} Z:${state.gravityEstimate.z.toFixed(2)} (|g|=${mag.toFixed(2)})`;
+      }
+    }
+    
+    // Reset button
+    elements.resetIntegration.textContent = '🔄 Reset Position';
+    elements.resetIntegration.disabled = false;
     
     // Update display
     updatePositionDisplay();
     drawHeightGraph();
     drawXYGraph();
-    
-    console.log('Integration reset. Gravity calibrated to:', state.gravityEstimate);
   }
   
   function integratePosition(data) {
+    // If calibrating, collect samples instead of integrating
+    if (state.isCalibrating) {
+      state.calibrationSamples.push({ ...state.lastAccel });
+      return;
+    }
+    
     const now = data.timestamp;
     
     // Need at least two samples to integrate
@@ -771,11 +823,17 @@
     if (dt > 0.1 || dt <= 0) return;
     
     // Get acceleration and subtract gravity estimate
-    const accel = {
+    let accel = {
       x: (state.lastAccel.x || 0) - state.gravityEstimate.x,
       y: (state.lastAccel.y || 0) - state.gravityEstimate.y,
       z: (state.lastAccel.z || 0) - state.gravityEstimate.z
     };
+    
+    // Apply small deadzone to reduce drift from noise (0.1 m/s²)
+    const deadzone = 0.1;
+    if (Math.abs(accel.x) < deadzone) accel.x = 0;
+    if (Math.abs(accel.y) < deadzone) accel.y = 0;
+    if (Math.abs(accel.z) < deadzone) accel.z = 0;
     
     // Simple Euler integration: v = v + a*dt
     state.velocity.x += accel.x * dt;

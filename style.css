@@ -377,6 +377,24 @@ header h1 {
   cursor: pointer;
 }
 
+.gravity-display {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.gravity-label {
+  color: var(--text-muted);
+}
+
+.gravity-values {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
 .position-display {
   margin-bottom: 16px;
 }
