@@ -375,35 +375,32 @@
     elements.orientRoll.textContent = roll.toFixed(1) + '°';
     elements.orientYaw.textContent = yaw.toFixed(1) + '°';
     
-    // Update bars (pitch and roll: -90 to 90 mapped to 0-100%)
-    // Bar shows deviation from center
-    const pitchPercent = Math.max(-90, Math.min(90, pitch)) / 90 * 50; // -50 to 50
-    elements.pitchBar.style.marginLeft = (50 + pitchPercent) + '%';
-    elements.pitchBar.style.width = Math.abs(pitchPercent) + '%';
-    if (pitchPercent < 0) {
-      elements.pitchBar.style.marginLeft = (50 + pitchPercent) + '%';
-    } else {
-      elements.pitchBar.style.marginLeft = '50%';
+    // Helper to update a bar element
+    // percent: -50 to +50, representing left-to-right from center
+    function updateBar(barEl, percent) {
+      const clampedPercent = Math.max(-50, Math.min(50, percent));
+      if (clampedPercent < 0) {
+        // Bar extends left from center
+        barEl.style.marginLeft = (50 + clampedPercent) + '%';
+        barEl.style.width = Math.abs(clampedPercent) + '%';
+      } else {
+        // Bar extends right from center
+        barEl.style.marginLeft = '50%';
+        barEl.style.width = clampedPercent + '%';
+      }
     }
     
-    const rollPercent = Math.max(-90, Math.min(90, roll)) / 90 * 50;
-    elements.rollBar.style.marginLeft = (50 + Math.min(0, rollPercent)) + '%';
-    elements.rollBar.style.width = Math.abs(rollPercent) + '%';
-    if (rollPercent < 0) {
-      elements.rollBar.style.marginLeft = (50 + rollPercent) + '%';
-    } else {
-      elements.rollBar.style.marginLeft = '50%';
-    }
+    // Pitch: ±90° maps to ±50%
+    const pitchPercent = (Math.max(-90, Math.min(90, pitch)) / 90) * 50;
+    updateBar(elements.pitchBar, pitchPercent);
     
-    // Yaw bar: -180 to 180 mapped to full width
-    const yawPercent = Math.max(-180, Math.min(180, yaw)) / 180 * 50;
-    elements.yawBar.style.marginLeft = (50 + Math.min(0, yawPercent)) + '%';
-    elements.yawBar.style.width = Math.abs(yawPercent) + '%';
-    if (yawPercent < 0) {
-      elements.yawBar.style.marginLeft = (50 + yawPercent) + '%';
-    } else {
-      elements.yawBar.style.marginLeft = '50%';
-    }
+    // Roll: ±90° maps to ±50%
+    const rollPercent = (Math.max(-90, Math.min(90, roll)) / 90) * 50;
+    updateBar(elements.rollBar, rollPercent);
+    
+    // Yaw: ±180° maps to ±50%
+    const yawPercent = (Math.max(-180, Math.min(180, yaw)) / 180) * 50;
+    updateBar(elements.yawBar, yawPercent);
   }
   
   function resetOrientationZero() {
