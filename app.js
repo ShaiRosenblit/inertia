@@ -104,6 +104,9 @@
     
     // Latency
     latencyTarget: document.getElementById('latency-target'),
+    latencyTargetText: null, // Will be set after DOM query
+    latencyTargetSub: null,
+    latencyStatus: document.getElementById('latency-status'),
     latencyResults: document.getElementById('latency-results'),
     latencyLast: document.getElementById('latency-last'),
     latencyAvg: document.getElementById('latency-avg'),
@@ -112,6 +115,10 @@
     latencyTapCount: document.getElementById('latency-tap-count'),
     resetLatency: document.getElementById('reset-latency')
   };
+  
+  // Set child elements after main element exists
+  elements.latencyTargetText = elements.latencyTarget.querySelector('.latency-target-text');
+  elements.latencyTargetSub = elements.latencyTarget.querySelector('.latency-target-sub');
 
   // ============================================
   // Initialization
@@ -455,14 +462,20 @@
     
     // Visual feedback
     elements.latencyTarget.classList.add('waiting');
-    elements.latencyTarget.querySelector('span').textContent = 'WAITING...';
+    elements.latencyTargetText.textContent = 'WAITING...';
+    elements.latencyTargetSub.textContent = 'Detecting impact...';
+    elements.latencyStatus.textContent = '👆 Tap detected! Waiting for accelerometer spike...';
+    elements.latencyStatus.className = 'latency-status waiting';
     
     // Timeout if no spike detected
     setTimeout(() => {
       if (state.latencyWaiting) {
         state.latencyWaiting = false;
         elements.latencyTarget.classList.remove('waiting');
-        elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
+        elements.latencyTargetText.textContent = 'TAP HERE';
+        elements.latencyTargetSub.textContent = 'Hold phone, tap firmly';
+        elements.latencyStatus.textContent = '❌ No impact detected. Try tapping harder or hold phone in hand.';
+        elements.latencyStatus.className = 'latency-status timeout';
       }
     }, 500);
   }
@@ -486,19 +499,23 @@
       if (latency > 0 && latency < 500) {
         state.latencyMeasurements.push(latency);
         updateLatencyDisplay(latency);
+        
+        // Visual feedback - success
+        elements.latencyTarget.classList.remove('waiting');
+        elements.latencyTarget.classList.add('detected');
+        elements.latencyTargetText.textContent = `${latency.toFixed(1)} ms`;
+        elements.latencyTargetSub.textContent = 'Impact detected!';
+        elements.latencyStatus.textContent = `✅ Success! Latency: ${latency.toFixed(1)} ms (spike: ${delta.toFixed(2)} m/s²)`;
+        elements.latencyStatus.className = 'latency-status success';
+        
+        setTimeout(() => {
+          elements.latencyTarget.classList.remove('detected');
+          elements.latencyTargetText.textContent = 'TAP HERE';
+          elements.latencyTargetSub.textContent = 'Hold phone, tap firmly';
+        }, 1000);
       }
       
       state.latencyWaiting = false;
-      
-      // Visual feedback
-      elements.latencyTarget.classList.remove('waiting');
-      elements.latencyTarget.classList.add('detected');
-      elements.latencyTarget.querySelector('span').textContent = `${latency.toFixed(1)} ms`;
-      
-      setTimeout(() => {
-        elements.latencyTarget.classList.remove('detected');
-        elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
-      }, 800);
     }
   }
   
@@ -524,7 +541,10 @@
     
     elements.latencyResults.classList.add('hidden');
     elements.latencyTarget.classList.remove('waiting', 'detected');
-    elements.latencyTarget.querySelector('span').textContent = 'TAP HERE';
+    elements.latencyTargetText.textContent = 'TAP HERE';
+    elements.latencyTargetSub.textContent = 'Hold phone, tap firmly';
+    elements.latencyStatus.textContent = '';
+    elements.latencyStatus.className = 'latency-status';
   }
 
   // ============================================

@@ -287,11 +287,18 @@ header h1 {
   opacity: 0.8;
 }
 
-.latency-target span {
+.latency-target-text {
   font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: white;
+}
+
+.latency-target-sub {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
 }
 
 .latency-target.waiting {
@@ -306,6 +313,26 @@ header h1 {
 
 .latency-target.detected {
   background: var(--accent-success);
+}
+
+.latency-status {
+  text-align: center;
+  font-size: 0.85rem;
+  min-height: 24px;
+  margin-top: 12px;
+  color: var(--text-secondary);
+}
+
+.latency-status.success {
+  color: var(--accent-success);
+}
+
+.latency-status.waiting {
+  color: var(--accent-warning);
+}
+
+.latency-status.timeout {
+  color: var(--accent-error);
 }
 
 .latency-results {
