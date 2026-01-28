@@ -152,6 +152,13 @@ header h1 {
 }
 
 /* Status Grid */
+/* Lock Controls */
+.lock-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .status-card {
   background: linear-gradient(135deg, var(--bg-card) 0%, #1a1a2e 100%);
 }

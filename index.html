@@ -26,6 +26,16 @@
     <!-- Main Dashboard (hidden until permission granted) -->
     <main id="dashboard" class="hidden">
       
+      <!-- Screen Lock Controls -->
+      <section class="card">
+        <h2>Screen Lock</h2>
+        <div class="lock-controls">
+          <button id="lock-portrait" class="btn-primary">🔒 Lock Portrait & Fullscreen</button>
+          <button id="exit-fullscreen" class="btn-secondary hidden">Exit Fullscreen</button>
+        </div>
+        <p id="lock-status" class="hint"></p>
+      </section>
+
       <!-- Status Bar -->
       <section class="card status-card">
         <div class="status-grid">
@@ -211,7 +221,7 @@
 
     <footer>
       <p>Inertia IMU Diagnostics • <a href="https://github.com/ShaiRosenblit/inertia">GitHub</a></p>
-      <p class="version">Build: 2026-01-28 12:53 IST</p>
+      <p class="version">Build: 2026-01-28 13:00 IST</p>
     </footer>
   </div>
 

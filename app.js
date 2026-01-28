@@ -185,6 +185,14 @@
       playClick();
       console.log('Test sound triggered');
     });
+    
+    // Screen lock controls
+    document.getElementById('lock-portrait').addEventListener('click', lockPortrait);
+    document.getElementById('exit-fullscreen').addEventListener('click', exitFullscreen);
+    
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', updateFullscreenUI);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
   }
 
   // ============================================
@@ -445,6 +453,65 @@
       const rate = state.sampleCount / elapsed;
       elements.sampleRate.textContent = formatValue(rate, 1) + ' Hz';
     }
+  }
+
+  // ============================================
+  // Screen Orientation Lock
+  // ============================================
+  
+  async function lockPortrait() {
+    const statusEl = document.getElementById('lock-status');
+    
+    try {
+      // First, try to go fullscreen (required for orientation lock on most browsers)
+      const docEl = document.documentElement;
+      
+      if (docEl.requestFullscreen) {
+        await docEl.requestFullscreen();
+      } else if (docEl.webkitRequestFullscreen) {
+        await docEl.webkitRequestFullscreen();
+      }
+      
+      // Now try to lock orientation
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('portrait-primary');
+        statusEl.textContent = '✅ Portrait locked! Orientation will stay fixed.';
+        statusEl.style.color = 'var(--accent-success)';
+      } else {
+        // iOS doesn't support orientation lock API, but fullscreen helps
+        statusEl.textContent = '⚠️ Fullscreen active. iOS cannot lock orientation via web API - use device rotation lock in Control Center.';
+        statusEl.style.color = 'var(--accent-warning)';
+      }
+      
+      updateFullscreenUI();
+      
+    } catch (error) {
+      console.error('Lock failed:', error);
+      statusEl.textContent = `⚠️ ${error.message}. On iOS, use Control Center rotation lock.`;
+      statusEl.style.color = 'var(--accent-warning)';
+    }
+  }
+  
+  function exitFullscreen() {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+    
+    // Unlock orientation
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
+    }
+    
+    const statusEl = document.getElementById('lock-status');
+    statusEl.textContent = '';
+  }
+  
+  function updateFullscreenUI() {
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    document.getElementById('lock-portrait').classList.toggle('hidden', isFullscreen);
+    document.getElementById('exit-fullscreen').classList.toggle('hidden', !isFullscreen);
   }
 
   // ============================================
