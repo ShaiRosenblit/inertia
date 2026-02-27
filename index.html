@@ -1,335 +1,1149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Inertia - IMU Diagnostics</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Æther — Motion Theremin</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@200;300;400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-elevated: #1a1a25;
+            --border: #2a2a3a;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888aa;
+            --text-muted: #555566;
+            --accent-pitch: #00d4aa;
+            --accent-volume: #ff6b9d;
+            --accent-timbre: #7c5cff;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, var(--accent-pitch) 0%, var(--accent-timbre) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: var(--bg-elevated);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        
+        .status-badge.active {
+            color: var(--accent-pitch);
+            border-color: var(--accent-pitch);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        
+        /* Main Content */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Permission Screen */
+        #permission-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        #permission-screen.hidden {
+            display: none;
+        }
+        
+        .permission-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-pitch) 0%, var(--accent-timbre) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 2.5rem;
+        }
+        
+        .permission-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        
+        .permission-desc {
+            color: var(--text-secondary);
+            max-width: 280px;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-pitch) 0%, #00a88a 100%);
+            color: #000;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+        
+        /* Instrument Screen */
+        #instrument-screen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+        }
+        
+        #instrument-screen.active {
+            display: flex;
+        }
+        
+        /* Play Button */
+        .play-section {
+            display: flex;
+            justify-content: center;
+            padding: 8px 0;
+        }
+        
+        .play-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 3px solid var(--accent-pitch);
+            background: transparent;
+            color: var(--accent-pitch);
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .play-btn.playing {
+            background: var(--accent-pitch);
+            color: var(--bg-dark);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+        
+        /* Visualizer */
+        .visualizer-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 16px;
+            flex: 0 0 140px;
+        }
+        
+        .visualizer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .note-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--accent-pitch);
+        }
+        
+        .freq-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        #waveform-canvas {
+            width: 100%;
+            height: 60px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-elevated);
+        }
+        
+        /* Control Meters */
+        .meters-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .meter {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 14px 12px;
+            text-align: center;
+        }
+        
+        .meter-label {
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        
+        .meter-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 500;
+        }
+        
+        .meter.pitch .meter-value { color: var(--accent-pitch); }
+        .meter.volume .meter-value { color: var(--accent-volume); }
+        .meter.timbre .meter-value { color: var(--accent-timbre); }
+        
+        .meter-bar {
+            height: 4px;
+            background: var(--bg-elevated);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .meter-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.05s linear;
+        }
+        
+        .meter.pitch .meter-fill { background: var(--accent-pitch); }
+        .meter.volume .meter-fill { background: var(--accent-volume); }
+        .meter.timbre .meter-fill { background: var(--accent-timbre); }
+        
+        /* Settings Panel */
+        .settings-section {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .settings-header {
+            padding: 14px 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .settings-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+        
+        .settings-content {
+            padding: 16px;
+            display: none;
+        }
+        
+        .settings-content.expanded {
+            display: block;
+        }
+        
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        
+        .setting-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .setting-group-title {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        
+        /* Mapping Controls */
+        .mapping-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-sm);
+        }
+        
+        .mapping-label {
+            flex: 0 0 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .mapping-label.pitch { color: var(--accent-pitch); }
+        .mapping-label.volume { color: var(--accent-volume); }
+        .mapping-label.timbre { color: var(--accent-timbre); }
+        
+        .mapping-select {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+        }
+        
+        .mapping-invert {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .mapping-invert.active {
+            background: var(--accent-pitch);
+            color: var(--bg-dark);
+            border-color: var(--accent-pitch);
+        }
+        
+        /* Scale & Quantization */
+        .scale-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .scale-btn {
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .scale-btn.active {
+            background: var(--accent-pitch);
+            color: var(--bg-dark);
+            border-color: var(--accent-pitch);
+        }
+        
+        /* Waveform Selection */
+        .waveform-options {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .waveform-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .waveform-btn.active {
+            background: var(--accent-timbre);
+            color: var(--bg-dark);
+            border-color: var(--accent-timbre);
+        }
+        
+        /* Range Sliders */
+        .range-row {
+            margin-bottom: 16px;
+        }
+        
+        .range-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .range-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .range-values {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-elevated);
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-pitch);
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* Calibrate Button */
+        .calibrate-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 1px dashed var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .calibrate-btn:active {
+            background: var(--bg-elevated);
+            border-style: solid;
+        }
+        
+        /* Orientation Debug */
+        .debug-info {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
     <header>
-      <h1>Inertia</h1>
-      <p class="subtitle">IMU Sensor Diagnostics</p>
+        <div class="logo">ÆTHER</div>
+        <div id="status-badge" class="status-badge">WAITING</div>
     </header>
-
-    <!-- Permission Gate -->
-    <section id="permission-gate" class="card">
-      <h2>Sensor Access Required</h2>
-      <p>iOS requires explicit permission to access motion sensors. Tap the button below to enable.</p>
-      <button id="request-permission" class="btn-primary">Enable Motion Sensors</button>
-      <p id="permission-status" class="status"></p>
-    </section>
-
-    <!-- Main Dashboard (hidden until permission granted) -->
-    <main id="dashboard" class="hidden">
-      
-      <!-- Screen Lock Controls -->
-      <section class="card">
-        <h2>Screen Lock</h2>
-        <div class="lock-controls">
-          <button id="lock-portrait" class="btn-primary">🔒 Lock Portrait & Fullscreen</button>
-          <button id="exit-fullscreen" class="btn-secondary hidden">Exit Fullscreen</button>
-        </div>
-        <p id="lock-status" class="hint"></p>
-      </section>
-
-      <!-- Status Bar -->
-      <section class="card status-card">
-        <div class="status-grid">
-          <div class="status-item">
-            <span class="status-label">Status</span>
-            <span id="sensor-status" class="status-value">Initializing...</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Sample Rate</span>
-            <span id="sample-rate" class="status-value">-- Hz</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Samples</span>
-            <span id="sample-count" class="status-value">0</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Dropped</span>
-            <span id="dropped-count" class="status-value status-dropped">0</span>
-          </div>
-        </div>
-        <p class="status-hint">⚠️ Scrolling/rotating may drop samples. Recording locks scroll.</p>
-      </section>
-
-      <!-- Accelerometer Data -->
-      <section class="card">
-        <h2>Accelerometer <span class="unit">(m/s²)</span></h2>
-        <div class="sensor-grid">
-          <div class="sensor-axis">
-            <span class="axis-label">X</span>
-            <span id="accel-x" class="axis-value">--</span>
-          </div>
-          <div class="sensor-axis">
-            <span class="axis-label">Y</span>
-            <span id="accel-y" class="axis-value">--</span>
-          </div>
-          <div class="sensor-axis">
-            <span class="axis-label">Z</span>
-            <span id="accel-z" class="axis-value">--</span>
-          </div>
-        </div>
-        <div class="sensor-meta">
-          <span>Magnitude: <span id="accel-mag">--</span></span>
-        </div>
-      </section>
-
-      <!-- Gyroscope Data -->
-      <section class="card">
-        <h2>Gyroscope <span class="unit">(rad/s)</span></h2>
-        <div class="sensor-grid">
-          <div class="sensor-axis">
-            <span class="axis-label">α</span>
-            <span id="gyro-alpha" class="axis-value">--</span>
-          </div>
-          <div class="sensor-axis">
-            <span class="axis-label">β</span>
-            <span id="gyro-beta" class="axis-value">--</span>
-          </div>
-          <div class="sensor-axis">
-            <span class="axis-label">γ</span>
-            <span id="gyro-gamma" class="axis-value">--</span>
-          </div>
-        </div>
-        <div class="sensor-meta">
-          <span>Magnitude: <span id="gyro-mag">--</span></span>
-        </div>
-      </section>
-
-      <!-- Timing Analysis -->
-      <section class="card">
-        <h2>Timing Analysis</h2>
-        <div class="timing-grid">
-          <div class="timing-item">
-            <span class="timing-label">Interval (reported)</span>
-            <span id="interval-reported" class="timing-value">-- ms</span>
-          </div>
-          <div class="timing-item">
-            <span class="timing-label">Interval (measured)</span>
-            <span id="interval-measured" class="timing-value">-- ms</span>
-          </div>
-          <div class="timing-item">
-            <span class="timing-label">Jitter (std dev)</span>
-            <span id="interval-jitter" class="timing-value">-- ms</span>
-          </div>
-          <div class="timing-item">
-            <span class="timing-label">Min / Max</span>
-            <span id="interval-minmax" class="timing-value">-- / -- ms</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Latency Test -->
-      <section class="card">
-        <h2>Tap Latency Test</h2>
-        <p class="hint">Hold phone in hand, tap FIRMLY. You'll hear a click when the accelerometer detects the impact - feel the delay! 🔊</p>
-        <div id="latency-target" class="latency-target">
-          <div class="latency-target-text">TAP HERE</div>
-          <div class="latency-target-sub">Hold phone, tap firmly</div>
-        </div>
-        <button id="test-sound" class="btn-secondary" style="margin-top: 12px;">🔊 Test Sound</button>
-        <div id="latency-status" class="latency-status"></div>
-        <div id="latency-results" class="latency-results hidden">
-          <div class="timing-grid">
-            <div class="timing-item">
-              <span class="timing-label">Last Tap</span>
-              <span id="latency-last" class="timing-value">-- ms</span>
-            </div>
-            <div class="timing-item">
-              <span class="timing-label">Average</span>
-              <span id="latency-avg" class="timing-value">-- ms</span>
-            </div>
-            <div class="timing-item">
-              <span class="timing-label">Min</span>
-              <span id="latency-min" class="timing-value">-- ms</span>
-            </div>
-            <div class="timing-item">
-              <span class="timing-label">Max</span>
-              <span id="latency-max" class="timing-value">-- ms</span>
-            </div>
-          </div>
-          <p class="latency-count">Successful taps: <span id="latency-tap-count">0</span></p>
-          <button id="reset-latency" class="btn-secondary">Reset</button>
-        </div>
-      </section>
-
-      <!-- Theremin -->
-      <section class="card theremin-card">
-        <h2>🎵 Theremin</h2>
-        <p class="hint">Roll (left/right) = pitch, Tilt (forward/back) = volume</p>
-        
-        <button id="theremin-toggle" class="btn-primary theremin-btn">▶ Start Theremin</button>
-        
-        <div id="theremin-display" class="theremin-display hidden">
-          <div class="theremin-viz">
-            <canvas id="theremin-canvas" width="300" height="150"></canvas>
-          </div>
-          <div class="theremin-info">
-            <div class="theremin-param">
-              <span class="param-label">Note</span>
-              <span id="theremin-note" class="param-value">--</span>
-            </div>
-            <div class="theremin-param">
-              <span class="param-label">Frequency</span>
-              <span id="theremin-freq" class="param-value">-- Hz</span>
-            </div>
-            <div class="theremin-param">
-              <span class="param-label">Volume</span>
-              <span id="theremin-vol" class="param-value">--%</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Orientation (Stable!) -->
-      <section class="card">
-        <h2>Orientation (Stable!) ⭐</h2>
-        <p class="hint">Uses gravity as reference - no drift for pitch/roll! Perfect for theremin.</p>
-        
-        <div class="orientation-values">
-          <div class="orientation-value-item">
-            <span class="orientation-color" style="background: #f472b6;"></span>
-            <span class="orientation-label">Pitch</span>
-            <span id="orient-pitch" class="orientation-number">--°</span>
-          </div>
-          <div class="orientation-value-item">
-            <span class="orientation-color" style="background: #34d399;"></span>
-            <span class="orientation-label">Roll</span>
-            <span id="orient-roll" class="orientation-number">--°</span>
-          </div>
-          <div class="orientation-value-item">
-            <span class="orientation-color" style="background: #60a5fa;"></span>
-            <span class="orientation-label">Yaw</span>
-            <span id="orient-yaw" class="orientation-number">--°</span>
-          </div>
+    
+    <main>
+        <!-- Permission Screen -->
+        <div id="permission-screen">
+            <div class="permission-icon">🎵</div>
+            <h1 class="permission-title">Motion Theremin</h1>
+            <p class="permission-desc">
+                Play music by tilting your device. Grant motion access to begin your performance.
+            </p>
+            <button id="start-btn" class="btn-primary">Enable Motion</button>
         </div>
         
-        <div class="graph-container">
-          <canvas id="orientation-graph" width="400" height="200"></canvas>
-        </div>
-        
-        <button id="reset-orientation" class="btn-secondary">Set Current as Zero</button>
-      </section>
-
-      <!-- Position Integration -->
-      <section class="card">
-        <h2>Position Integration (Experimental)</h2>
-        <p class="hint">Double-integrates acceleration to estimate position. Press Reset, move phone, see trajectory. Warning: drifts quickly!</p>
-        
-        <div class="integration-controls">
-          <button id="reset-integration" class="btn-primary">🔄 Reset Position</button>
-          <label class="checkbox-label">
-            <input type="checkbox" id="integration-active" checked>
-            Integration Active
-          </label>
-        </div>
-        
-        <div id="gravity-display" class="gravity-display">
-          <span class="gravity-label">Gravity estimate:</span>
-          <span id="gravity-values" class="gravity-values">Not calibrated</span>
-        </div>
-        
-        <div class="position-display">
-          <div class="position-grid">
-            <div class="position-item">
-              <span class="position-label">X</span>
-              <span id="pos-x" class="position-value">0.00 m</span>
+        <!-- Instrument Screen -->
+        <div id="instrument-screen">
+            <!-- Play Control -->
+            <div class="play-section">
+                <button id="play-btn" class="play-btn">▶</button>
             </div>
-            <div class="position-item">
-              <span class="position-label">Y</span>
-              <span id="pos-y" class="position-value">0.00 m</span>
+            
+            <!-- Visualizer -->
+            <div class="visualizer-section">
+                <div class="visualizer-header">
+                    <div class="note-display" id="note-display">—</div>
+                    <div class="freq-display" id="freq-display">— Hz</div>
+                </div>
+                <canvas id="waveform-canvas"></canvas>
             </div>
-            <div class="position-item">
-              <span class="position-label">Z (Height)</span>
-              <span id="pos-z" class="position-value">0.00 m</span>
+            
+            <!-- Control Meters -->
+            <div class="meters-section">
+                <div class="meter pitch">
+                    <div class="meter-label">Pitch</div>
+                    <div class="meter-value" id="pitch-value">0°</div>
+                    <div class="meter-bar"><div class="meter-fill" id="pitch-fill"></div></div>
+                </div>
+                <div class="meter volume">
+                    <div class="meter-label">Volume</div>
+                    <div class="meter-value" id="volume-value">0%</div>
+                    <div class="meter-bar"><div class="meter-fill" id="volume-fill"></div></div>
+                </div>
+                <div class="meter timbre">
+                    <div class="meter-label">Timbre</div>
+                    <div class="meter-value" id="timbre-value">0%</div>
+                    <div class="meter-bar"><div class="meter-fill" id="timbre-fill"></div></div>
+                </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="graph-container">
-          <h3>Height (Z) Over Time</h3>
-          <canvas id="height-graph" width="400" height="150"></canvas>
-        </div>
-        
-        <div class="graph-container">
-          <h3>XY Position (Top View)</h3>
-          <canvas id="xy-graph" width="300" height="300"></canvas>
-        </div>
-      </section>
-
-      <!-- Noise Analysis (when stationary) -->
-      <section class="card">
-        <h2>Noise Analysis</h2>
-        <p class="hint">Place phone flat and still for accurate readings</p>
-        <button id="measure-noise" class="btn-secondary">Measure Noise (3s)</button>
-        <div id="noise-results" class="noise-results hidden">
-          <div class="noise-grid">
-            <div class="noise-item">
-              <span class="noise-label">Accel Noise (σ)</span>
-              <span id="accel-noise" class="noise-value">--</span>
+            
+            <!-- Settings -->
+            <div class="settings-section">
+                <div class="settings-header">
+                    <span>Settings</span>
+                    <button id="settings-toggle" class="settings-toggle">▼</button>
+                </div>
+                <div id="settings-content" class="settings-content">
+                    <!-- Control Mapping -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Control Mapping</div>
+                        <div class="mapping-row">
+                            <span class="mapping-label pitch">Pitch</span>
+                            <select id="pitch-source" class="mapping-select">
+                                <option value="roll">Roll (Tilt L/R)</option>
+                                <option value="pitch">Pitch (Tilt F/B)</option>
+                                <option value="yaw">Yaw (Rotate)</option>
+                            </select>
+                            <button id="pitch-invert" class="mapping-invert">⇅</button>
+                        </div>
+                        <div class="mapping-row">
+                            <span class="mapping-label volume">Volume</span>
+                            <select id="volume-source" class="mapping-select">
+                                <option value="roll">Roll (Tilt L/R)</option>
+                                <option value="pitch" selected>Pitch (Tilt F/B)</option>
+                                <option value="yaw">Yaw (Rotate)</option>
+                            </select>
+                            <button id="volume-invert" class="mapping-invert">⇅</button>
+                        </div>
+                        <div class="mapping-row">
+                            <span class="mapping-label timbre">Timbre</span>
+                            <select id="timbre-source" class="mapping-select">
+                                <option value="roll">Roll (Tilt L/R)</option>
+                                <option value="pitch">Pitch (Tilt F/B)</option>
+                                <option value="yaw" selected>Yaw (Rotate)</option>
+                            </select>
+                            <button id="timbre-invert" class="mapping-invert">⇅</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Scale / Quantization -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Scale</div>
+                        <div class="scale-options">
+                            <button class="scale-btn" data-scale="off">Off</button>
+                            <button class="scale-btn active" data-scale="chromatic">Chromatic</button>
+                            <button class="scale-btn" data-scale="major">Major</button>
+                            <button class="scale-btn" data-scale="minor">Minor</button>
+                            <button class="scale-btn" data-scale="pentatonic">Pentatonic</button>
+                            <button class="scale-btn" data-scale="blues">Blues</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Waveform / Timbre Mode -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Waveform</div>
+                        <div class="waveform-options">
+                            <button class="waveform-btn active" data-wave="sine">Sine</button>
+                            <button class="waveform-btn" data-wave="triangle">Tri</button>
+                            <button class="waveform-btn" data-wave="sawtooth">Saw</button>
+                            <button class="waveform-btn" data-wave="square">Sq</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Frequency Range -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Frequency Range</div>
+                        <div class="range-row">
+                            <div class="range-header">
+                                <span class="range-label">Low Note</span>
+                                <span class="range-values" id="low-note-display">C3 (131 Hz)</span>
+                            </div>
+                            <input type="range" id="low-note" min="36" max="84" value="48">
+                        </div>
+                        <div class="range-row">
+                            <div class="range-header">
+                                <span class="range-label">High Note</span>
+                                <span class="range-values" id="high-note-display">C6 (1047 Hz)</span>
+                            </div>
+                            <input type="range" id="high-note" min="36" max="96" value="84">
+                        </div>
+                    </div>
+                    
+                    <!-- Calibration -->
+                    <div class="setting-group">
+                        <button id="calibrate-btn" class="calibrate-btn">
+                            📐 Set Current Position as Center
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="noise-item">
-              <span class="noise-label">Gyro Noise (σ)</span>
-              <span id="gyro-noise" class="noise-value">--</span>
+            
+            <!-- Debug -->
+            <div class="debug-info" id="debug-info">
+                Roll: — | Pitch: — | Yaw: —
             </div>
-          </div>
         </div>
-      </section>
-
-      <!-- Recording Controls -->
-      <section class="card">
-        <h2>Recording</h2>
-        <div class="recording-controls">
-          <button id="start-recording" class="btn-primary">Start Recording</button>
-          <button id="stop-recording" class="btn-secondary hidden">Stop Recording</button>
-          <button id="export-csv" class="btn-secondary hidden">Export CSV</button>
-          <button id="export-json" class="btn-secondary hidden">Export JSON</button>
-        </div>
-        <div id="recording-status" class="recording-status hidden">
-          <span class="recording-indicator"></span>
-          <span>Recording: <span id="recording-count">0</span> samples</span>
-        </div>
-      </section>
-
-      <!-- API Info -->
-      <section class="card">
-        <h2>API Information</h2>
-        <div class="api-info">
-          <div class="api-item">
-            <span class="api-label">DeviceMotionEvent</span>
-            <span id="api-devicemotion" class="api-value">--</span>
-          </div>
-          <div class="api-item">
-            <span class="api-label">DeviceOrientationEvent</span>
-            <span id="api-deviceorientation" class="api-value">--</span>
-          </div>
-          <div class="api-item">
-            <span class="api-label">Generic Sensor API</span>
-            <span id="api-genericsensor" class="api-value">--</span>
-          </div>
-          <div class="api-item">
-            <span class="api-label">User Agent</span>
-            <span id="api-useragent" class="api-value api-useragent">--</span>
-          </div>
-        </div>
-      </section>
-
     </main>
-
-    <footer>
-      <p>Inertia IMU Diagnostics • <a href="https://github.com/ShaiRosenblit/inertia">GitHub</a></p>
-      <p class="version">Build: 2026-01-28 14:52 IST</p>
-    </footer>
-  </div>
-
-  <script src="app.js"></script>
+    
+    <script>
+        // ============================================
+        // ÆTHER — Motion Theremin
+        // ============================================
+        
+        // --- Constants ---
+        const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+        
+        const SCALES = {
+            off: null,
+            chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            major: [0, 2, 4, 5, 7, 9, 11],
+            minor: [0, 2, 3, 5, 7, 8, 10],
+            pentatonic: [0, 2, 4, 7, 9],
+            blues: [0, 3, 5, 6, 7, 10]
+        };
+        
+        // --- State ---
+        const state = {
+            // Permissions & playback
+            hasPermission: false,
+            isPlaying: false,
+            
+            // Raw orientation (degrees)
+            orientation: { alpha: 0, beta: 0, gamma: 0 },
+            
+            // Calibration offset
+            calibration: { roll: 0, pitch: 0, yaw: 0 },
+            
+            // Normalized control values (0-1)
+            controls: { pitch: 0.5, volume: 0.5, timbre: 0.5 },
+            
+            // Settings
+            settings: {
+                pitchSource: 'roll',
+                pitchInvert: false,
+                volumeSource: 'pitch',
+                volumeInvert: false,
+                timbreSource: 'yaw',
+                timbreInvert: false,
+                scale: 'chromatic',
+                waveform: 'sine',
+                lowNote: 48,  // MIDI note (C3)
+                highNote: 84  // MIDI note (C6)
+            }
+        };
+        
+        // --- Audio Engine ---
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+        let filterNode = null;
+        let analyser = null;
+        
+        function initAudio() {
+            if (audioCtx) return;
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create nodes
+            oscillator = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+            filterNode = audioCtx.createBiquadFilter();
+            analyser = audioCtx.createAnalyser();
+            
+            // Configure
+            oscillator.type = state.settings.waveform;
+            oscillator.frequency.value = 440;
+            gainNode.gain.value = 0;
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 2000;
+            filterNode.Q.value = 1;
+            analyser.fftSize = 256;
+            
+            // Connect: oscillator -> filter -> gain -> analyser -> output
+            oscillator.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            
+            oscillator.start();
+        }
+        
+        function startPlaying() {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            state.isPlaying = true;
+            updatePlayButton();
+            requestAnimationFrame(audioLoop);
+        }
+        
+        function stopPlaying() {
+            state.isPlaying = false;
+            if (gainNode) {
+                gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+            }
+            updatePlayButton();
+        }
+        
+        function togglePlaying() {
+            if (state.isPlaying) {
+                stopPlaying();
+            } else {
+                startPlaying();
+            }
+        }
+        
+        // --- Frequency & Note Helpers ---
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+        
+        function freqToMidi(freq) {
+            return 69 + 12 * Math.log2(freq / 440);
+        }
+        
+        function midiToNoteName(midi) {
+            const octave = Math.floor(midi / 12) - 1;
+            const note = NOTE_NAMES[midi % 12];
+            return `${note}${octave}`;
+        }
+        
+        function quantizeToScale(midi, scale) {
+            if (!scale) return midi; // No quantization
+            
+            const octave = Math.floor(midi / 12);
+            const noteInOctave = midi % 12;
+            
+            // Find closest note in scale
+            let closest = scale[0];
+            let minDist = Math.abs(noteInOctave - scale[0]);
+            
+            for (const scaleNote of scale) {
+                const dist = Math.abs(noteInOctave - scaleNote);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = scaleNote;
+                }
+                // Also check wrapping (e.g., 11 is close to 0 in next octave)
+                const wrapDist = Math.abs(noteInOctave - (scaleNote + 12));
+                if (wrapDist < minDist) {
+                    minDist = wrapDist;
+                    closest = scaleNote + 12;
+                }
+            }
+            
+            return octave * 12 + closest;
+        }
+        
+        // --- Orientation Processing ---
+        function handleOrientation(event) {
+            // Store raw values
+            state.orientation.alpha = event.alpha || 0; // Yaw (0-360)
+            state.orientation.beta = event.beta || 0;   // Pitch (-180 to 180)
+            state.orientation.gamma = event.gamma || 0; // Roll (-90 to 90)
+            
+            // Calculate calibrated values
+            const roll = state.orientation.gamma - state.calibration.roll;
+            const pitch = state.orientation.beta - state.calibration.pitch;
+            let yaw = state.orientation.alpha - state.calibration.yaw;
+            
+            // Normalize yaw to -180 to 180
+            if (yaw > 180) yaw -= 360;
+            if (yaw < -180) yaw += 360;
+            
+            // Map to control values
+            state.controls.pitch = mapSourceToControl(state.settings.pitchSource, roll, pitch, yaw, state.settings.pitchInvert);
+            state.controls.volume = mapSourceToControl(state.settings.volumeSource, roll, pitch, yaw, state.settings.volumeInvert);
+            state.controls.timbre = mapSourceToControl(state.settings.timbreSource, roll, pitch, yaw, state.settings.timbreInvert);
+            
+            // Update debug display
+            updateDebugInfo(roll, pitch, yaw);
+        }
+        
+        function mapSourceToControl(source, roll, pitch, yaw, invert) {
+            let value;
+            switch (source) {
+                case 'roll':
+                    // Roll: -90 to 90 degrees
+                    value = (roll + 90) / 180;
+                    break;
+                case 'pitch':
+                    // Pitch: -90 to 90 degrees (usable range)
+                    value = (Math.max(-90, Math.min(90, pitch)) + 90) / 180;
+                    break;
+                case 'yaw':
+                    // Yaw: -180 to 180 degrees
+                    value = (yaw + 180) / 360;
+                    break;
+                default:
+                    value = 0.5;
+            }
+            
+            // Clamp to 0-1
+            value = Math.max(0, Math.min(1, value));
+            
+            // Invert if needed
+            if (invert) value = 1 - value;
+            
+            return value;
+        }
+        
+        // --- Audio Loop ---
+        function audioLoop() {
+            if (!state.isPlaying) return;
+            
+            // Calculate frequency from pitch control
+            const midiRange = state.settings.highNote - state.settings.lowNote;
+            let midi = state.settings.lowNote + state.controls.pitch * midiRange;
+            
+            // Quantize to scale
+            const scale = SCALES[state.settings.scale];
+            if (scale) {
+                midi = quantizeToScale(Math.round(midi), scale);
+            }
+            
+            const freq = midiToFreq(midi);
+            
+            // Update oscillator
+            oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.01);
+            
+            // Update volume (with smooth ramping)
+            const targetGain = state.controls.volume * 0.5; // Max gain 0.5
+            gainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.02);
+            
+            // Update filter (timbre control)
+            // Map 0-1 to 200Hz - 8000Hz
+            const filterFreq = 200 + state.controls.timbre * 7800;
+            filterNode.frequency.setTargetAtTime(filterFreq, audioCtx.currentTime, 0.02);
+            
+            // Update displays
+            updateDisplays(midi, freq);
+            
+            requestAnimationFrame(audioLoop);
+        }
+        
+        // --- Waveform Visualization ---
+        function drawWaveform() {
+            const canvas = document.getElementById('waveform-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set actual canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            function draw() {
+                const width = rect.width;
+                const height = rect.height;
+                
+                // Clear
+                ctx.fillStyle = '#1a1a25';
+                ctx.fillRect(0, 0, width, height);
+                
+                if (!analyser || !state.isPlaying) {
+                    // Draw flat line when not playing
+                    ctx.strokeStyle = '#2a2a3a';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, height / 2);
+                    ctx.lineTo(width, height / 2);
+                    ctx.stroke();
+                    requestAnimationFrame(draw);
+                    return;
+                }
+                
+                // Get waveform data
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteTimeDomainData(dataArray);
+                
+                // Draw waveform
+                ctx.strokeStyle = '#00d4aa';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                const sliceWidth = width / dataArray.length;
+                let x = 0;
+                
+                for (let i = 0; i < dataArray.length; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = (v * height) / 2;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    x += sliceWidth;
+                }
+                
+                ctx.stroke();
+                
+                // Add glow effect
+                ctx.shadowColor = '#00d4aa';
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                
+                requestAnimationFrame(draw);
+            }
+            
+            draw();
+        }
+        
+        // --- UI Updates ---
+        function updateDisplays(midi, freq) {
+            // Note display
+            const noteName = midiToNoteName(Math.round(midi));
+            document.getElementById('note-display').textContent = noteName;
+            document.getElementById('freq-display').textContent = `${freq.toFixed(1)} Hz`;
+            
+            // Meters
+            const pitchDegrees = ((state.controls.pitch - 0.5) * 180).toFixed(0);
+            document.getElementById('pitch-value').textContent = `${pitchDegrees}°`;
+            document.getElementById('pitch-fill').style.width = `${state.controls.pitch * 100}%`;
+            
+            const volumePercent = (state.controls.volume * 100).toFixed(0);
+            document.getElementById('volume-value').textContent = `${volumePercent}%`;
+            document.getElementById('volume-fill').style.width = `${state.controls.volume * 100}%`;
+            
+            const timbrePercent = (state.controls.timbre * 100).toFixed(0);
+            document.getElementById('timbre-value').textContent = `${timbrePercent}%`;
+            document.getElementById('timbre-fill').style.width = `${state.controls.timbre * 100}%`;
+        }
+        
+        function updateDebugInfo(roll, pitch, yaw) {
+            document.getElementById('debug-info').textContent = 
+                `Roll: ${roll.toFixed(1)}° | Pitch: ${pitch.toFixed(1)}° | Yaw: ${yaw.toFixed(1)}°`;
+        }
+        
+        function updatePlayButton() {
+            const btn = document.getElementById('play-btn');
+            if (state.isPlaying) {
+                btn.textContent = '⏸';
+                btn.classList.add('playing');
+            } else {
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+            }
+        }
+        
+        function updateStatusBadge(active) {
+            const badge = document.getElementById('status-badge');
+            if (active) {
+                badge.textContent = 'ACTIVE';
+                badge.classList.add('active');
+            } else {
+                badge.textContent = 'WAITING';
+                badge.classList.remove('active');
+            }
+        }
+        
+        function updateNoteRangeDisplay() {
+            const lowMidi = parseInt(document.getElementById('low-note').value);
+            const highMidi = parseInt(document.getElementById('high-note').value);
+            
+            state.settings.lowNote = lowMidi;
+            state.settings.highNote = highMidi;
+            
+            document.getElementById('low-note-display').textContent = 
+                `${midiToNoteName(lowMidi)} (${midiToFreq(lowMidi).toFixed(0)} Hz)`;
+            document.getElementById('high-note-display').textContent = 
+                `${midiToNoteName(highMidi)} (${midiToFreq(highMidi).toFixed(0)} Hz)`;
+        }
+        
+        // --- Permission Handling ---
+        async function requestPermission() {
+            try {
+                // iOS 13+ requires explicit permission
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        alert('Motion permission denied. Please enable in Settings.');
+                        return false;
+                    }
+                }
+                
+                // Start listening for orientation
+                window.addEventListener('deviceorientation', handleOrientation);
+                
+                // Show instrument screen
+                document.getElementById('permission-screen').classList.add('hidden');
+                document.getElementById('instrument-screen').classList.add('active');
+                
+                state.hasPermission = true;
+                updateStatusBadge(true);
+                
+                // Initialize audio on first interaction
+                initAudio();
+                
+                // Start waveform visualization
+                drawWaveform();
+                
+                return true;
+            } catch (error) {
+                console.error('Permission error:', error);
+                alert('Could not access motion sensors: ' + error.message);
+                return false;
+            }
+        }
+        
+        // --- Calibration ---
+        function calibrate() {
+            state.calibration.roll = state.orientation.gamma;
+            state.calibration.pitch = state.orientation.beta;
+            state.calibration.yaw = state.orientation.alpha;
+            
+            // Visual feedback
+            const btn = document.getElementById('calibrate-btn');
+            btn.textContent = '✓ Calibrated!';
+            setTimeout(() => {
+                btn.textContent = '📐 Set Current Position as Center';
+            }, 1500);
+        }
+        
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Start button
+            document.getElementById('start-btn').addEventListener('click', requestPermission);
+            
+            // Play button
+            document.getElementById('play-btn').addEventListener('click', togglePlaying);
+            
+            // Settings toggle
+            document.getElementById('settings-toggle').addEventListener('click', () => {
+                const content = document.getElementById('settings-content');
+                const toggle = document.getElementById('settings-toggle');
+                content.classList.toggle('expanded');
+                toggle.textContent = content.classList.contains('expanded') ? '▲' : '▼';
+            });
+            
+            // Control mapping
+            document.getElementById('pitch-source').addEventListener('change', (e) => {
+                state.settings.pitchSource = e.target.value;
+            });
+            document.getElementById('volume-source').addEventListener('change', (e) => {
+                state.settings.volumeSource = e.target.value;
+            });
+            document.getElementById('timbre-source').addEventListener('change', (e) => {
+                state.settings.timbreSource = e.target.value;
+            });
+            
+            // Invert buttons
+            document.getElementById('pitch-invert').addEventListener('click', (e) => {
+                state.settings.pitchInvert = !state.settings.pitchInvert;
+                e.target.classList.toggle('active', state.settings.pitchInvert);
+            });
+            document.getElementById('volume-invert').addEventListener('click', (e) => {
+                state.settings.volumeInvert = !state.settings.volumeInvert;
+                e.target.classList.toggle('active', state.settings.volumeInvert);
+            });
+            document.getElementById('timbre-invert').addEventListener('click', (e) => {
+                state.settings.timbreInvert = !state.settings.timbreInvert;
+                e.target.classList.toggle('active', state.settings.timbreInvert);
+            });
+            
+            // Scale buttons
+            document.querySelectorAll('.scale-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.settings.scale = btn.dataset.scale;
+                });
+            });
+            
+            // Waveform buttons
+            document.querySelectorAll('.waveform-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.waveform-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.settings.waveform = btn.dataset.wave;
+                    if (oscillator) {
+                        oscillator.type = state.settings.waveform;
+                    }
+                });
+            });
+            
+            // Note range sliders
+            document.getElementById('low-note').addEventListener('input', updateNoteRangeDisplay);
+            document.getElementById('high-note').addEventListener('input', updateNoteRangeDisplay);
+            
+            // Initialize range displays
+            updateNoteRangeDisplay();
+            
+            // Calibrate button
+            document.getElementById('calibrate-btn').addEventListener('click', calibrate);
+            
+            // Check if running in secure context
+            if (!window.isSecureContext) {
+                document.getElementById('status-badge').textContent = 'HTTPS REQUIRED';
+            }
+        });
+    </script>
 </body>
 </html>
-
