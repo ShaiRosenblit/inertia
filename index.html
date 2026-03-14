@@ -228,8 +228,8 @@
         /* Control Meters */
         .meters-section {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
         
         .meter {
@@ -350,6 +350,7 @@
         .mapping-label.pitch { color: var(--accent-pitch); }
         .mapping-label.volume { color: var(--accent-volume); }
         .mapping-label.timbre { color: var(--accent-timbre); }
+        .mapping-label.bend { color: #ffaa00; }
         
         .mapping-select {
             flex: 1;
@@ -489,6 +490,78 @@
             border-style: solid;
         }
         
+        /* Touch Strip */
+        .controls-row {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .touch-strip-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .touch-strip {
+            width: 50px;
+            height: 120px;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            position: relative;
+            touch-action: none;
+            cursor: pointer;
+        }
+        
+        .touch-strip:active {
+            border-color: var(--accent-pitch);
+        }
+        
+        .touch-center-line {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            top: 50%;
+            height: 2px;
+            background: var(--border);
+            transform: translateY(-50%);
+        }
+        
+        .touch-indicator {
+            position: absolute;
+            left: 5px;
+            right: 5px;
+            height: 12px;
+            background: var(--accent-pitch);
+            border-radius: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: top 0.05s ease-out;
+            box-shadow: 0 0 10px var(--accent-glow);
+            opacity: 0.5;
+        }
+        
+        .touch-indicator.active {
+            opacity: 1;
+        }
+        
+        .touch-label {
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+        
+        .meters-section {
+            flex: 1;
+        }
+        
+        /* Bend meter color */
+        .meter.bend .meter-value { color: #ffaa00; }
+        .meter.bend .meter-fill { background: #ffaa00; }
+
         /* Orientation Debug */
         .debug-info {
             font-family: 'JetBrains Mono', monospace;
@@ -515,7 +588,7 @@
         <div class="logo">ÆTHER</div>
         <div id="status-badge" class="status-badge">WAITING</div>
     </header>
-    <div class="version-info">v1.0 • 2026-03-14 12:56</div>
+    <div class="version-info">v1.1 • 2026-03-14 13:09</div>
     
     <main>
         <!-- Permission Screen -->
@@ -544,22 +617,39 @@
                 <canvas id="waveform-canvas"></canvas>
             </div>
             
-            <!-- Control Meters -->
-            <div class="meters-section">
-                <div class="meter pitch">
-                    <div class="meter-label">Pitch</div>
-                    <div class="meter-value" id="pitch-value">0°</div>
-                    <div class="meter-bar"><div class="meter-fill" id="pitch-fill"></div></div>
+            <!-- Touch Strip + Meters Row -->
+            <div class="controls-row">
+                <!-- Touch Strip -->
+                <div class="touch-strip-container">
+                    <div class="touch-strip" id="touch-strip">
+                        <div class="touch-indicator" id="touch-indicator"></div>
+                        <div class="touch-center-line"></div>
+                    </div>
+                    <div class="touch-label">BEND</div>
                 </div>
-                <div class="meter volume">
-                    <div class="meter-label">Volume</div>
-                    <div class="meter-value" id="volume-value">0%</div>
-                    <div class="meter-bar"><div class="meter-fill" id="volume-fill"></div></div>
-                </div>
-                <div class="meter timbre">
-                    <div class="meter-label">Timbre</div>
-                    <div class="meter-value" id="timbre-value">0%</div>
-                    <div class="meter-bar"><div class="meter-fill" id="timbre-fill"></div></div>
+                
+                <!-- Control Meters -->
+                <div class="meters-section">
+                    <div class="meter pitch">
+                        <div class="meter-label">Pitch</div>
+                        <div class="meter-value" id="pitch-value">0°</div>
+                        <div class="meter-bar"><div class="meter-fill" id="pitch-fill"></div></div>
+                    </div>
+                    <div class="meter volume">
+                        <div class="meter-label">Volume</div>
+                        <div class="meter-value" id="volume-value">0%</div>
+                        <div class="meter-bar"><div class="meter-fill" id="volume-fill"></div></div>
+                    </div>
+                    <div class="meter timbre">
+                        <div class="meter-label">Timbre</div>
+                        <div class="meter-value" id="timbre-value">0%</div>
+                        <div class="meter-bar"><div class="meter-fill" id="timbre-fill"></div></div>
+                    </div>
+                    <div class="meter bend">
+                        <div class="meter-label">Bend</div>
+                        <div class="meter-value" id="bend-value">0</div>
+                        <div class="meter-bar"><div class="meter-fill" id="bend-fill"></div></div>
+                    </div>
                 </div>
             </div>
             
@@ -579,6 +669,7 @@
                                 <option value="roll">Roll (Tilt L/R)</option>
                                 <option value="pitch">Pitch (Tilt F/B)</option>
                                 <option value="yaw">Yaw (Rotate)</option>
+                                <option value="touch">Touch Strip</option>
                             </select>
                             <button id="pitch-invert" class="mapping-invert">⇅</button>
                         </div>
@@ -588,6 +679,7 @@
                                 <option value="roll">Roll (Tilt L/R)</option>
                                 <option value="pitch" selected>Pitch (Tilt F/B)</option>
                                 <option value="yaw">Yaw (Rotate)</option>
+                                <option value="touch">Touch Strip</option>
                             </select>
                             <button id="volume-invert" class="mapping-invert">⇅</button>
                         </div>
@@ -597,8 +689,19 @@
                                 <option value="roll">Roll (Tilt L/R)</option>
                                 <option value="pitch">Pitch (Tilt F/B)</option>
                                 <option value="yaw" selected>Yaw (Rotate)</option>
+                                <option value="touch">Touch Strip</option>
                             </select>
                             <button id="timbre-invert" class="mapping-invert">⇅</button>
+                        </div>
+                        <div class="mapping-row">
+                            <span class="mapping-label bend">Bend</span>
+                            <select id="bend-source" class="mapping-select">
+                                <option value="roll">Roll (Tilt L/R)</option>
+                                <option value="pitch">Pitch (Tilt F/B)</option>
+                                <option value="yaw">Yaw (Rotate)</option>
+                                <option value="touch" selected>Touch Strip</option>
+                            </select>
+                            <button id="bend-invert" class="mapping-invert">⇅</button>
                         </div>
                     </div>
                     
@@ -642,6 +745,18 @@
                                 <span class="range-values" id="high-note-display">C6 (1047 Hz)</span>
                             </div>
                             <input type="range" id="high-note" min="36" max="96" value="84">
+                        </div>
+                    </div>
+                    
+                    <!-- Bend Range -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Bend Range</div>
+                        <div class="range-row">
+                            <div class="range-header">
+                                <span class="range-label">Max Bend</span>
+                                <span class="range-values" id="bend-range-display">±2 semitones</span>
+                            </div>
+                            <input type="range" id="bend-range" min="1" max="12" value="2">
                         </div>
                     </div>
                     
@@ -703,7 +818,13 @@
             calibration: { roll: 0, pitch: 0, yaw: 0 },
             
             // Normalized control values (0-1)
-            controls: { pitch: 0.5, volume: 0.5, timbre: 0.5 },
+            controls: { pitch: 0.5, volume: 0.5, timbre: 0.5, bend: 0.5 },
+            
+            // Raw input values (0-1)
+            inputs: { roll: 0.5, pitch: 0.5, yaw: 0.5, touch: 0.5 },
+            
+            // Touch state
+            isTouching: false,
             
             // Settings
             settings: {
@@ -713,6 +834,9 @@
                 volumeInvert: false,
                 timbreSource: 'yaw',
                 timbreInvert: false,
+                bendSource: 'touch',
+                bendInvert: false,
+                bendRange: 2,  // semitones
                 scale: 'pentatonic',
                 waveform: 'sawtooth',
                 lowNote: 48,  // MIDI note (C3)
@@ -879,41 +1003,90 @@
             if (yaw > 180) yaw -= 360;
             if (yaw < -180) yaw += 360;
             
-            // Map to control values
-            state.controls.pitch = mapSourceToControl(state.settings.pitchSource, roll, pitch, yaw, state.settings.pitchInvert);
-            state.controls.volume = mapSourceToControl(state.settings.volumeSource, roll, pitch, yaw, state.settings.volumeInvert);
-            state.controls.timbre = mapSourceToControl(state.settings.timbreSource, roll, pitch, yaw, state.settings.timbreInvert);
+            // Store normalized input values (0-1)
+            state.inputs.roll = Math.max(0, Math.min(1, (roll + 90) / 180));
+            state.inputs.pitch = Math.max(0, Math.min(1, (Math.max(-90, Math.min(90, pitch)) + 90) / 180));
+            state.inputs.yaw = Math.max(0, Math.min(1, (Math.max(-45, Math.min(45, yaw)) + 45) / 90));
+            // touch is updated by touch handlers
+            
+            // Map inputs to control values
+            updateControlValues();
             
             // Update debug display
             updateDebugInfo(roll, pitch, yaw);
         }
         
-        function mapSourceToControl(source, roll, pitch, yaw, invert) {
-            let value;
-            switch (source) {
-                case 'roll':
-                    // Roll: -90 to 90 degrees
-                    value = (roll + 90) / 180;
-                    break;
-                case 'pitch':
-                    // Pitch: -90 to 90 degrees (usable range)
-                    value = (Math.max(-90, Math.min(90, pitch)) + 90) / 180;
-                    break;
-                case 'yaw':
-                    // Yaw: -45 to 45 degrees for more sensitivity (was -180 to 180)
-                    value = (Math.max(-45, Math.min(45, yaw)) + 45) / 90;
-                    break;
-                default:
-                    value = 0.5;
-            }
+        function updateControlValues() {
+            state.controls.pitch = mapSourceToControl(state.settings.pitchSource, state.settings.pitchInvert);
+            state.controls.volume = mapSourceToControl(state.settings.volumeSource, state.settings.volumeInvert);
+            state.controls.timbre = mapSourceToControl(state.settings.timbreSource, state.settings.timbreInvert);
+            state.controls.bend = mapSourceToControl(state.settings.bendSource, state.settings.bendInvert);
             
-            // Clamp to 0-1
-            value = Math.max(0, Math.min(1, value));
+            // Update touch indicator and bend meter
+            updateTouchIndicator();
+        }
+        
+        function mapSourceToControl(source, invert) {
+            let value = state.inputs[source] || 0.5;
             
             // Invert if needed
             if (invert) value = 1 - value;
             
             return value;
+        }
+        
+        // --- Touch Handling ---
+        function initTouchStrip() {
+            const strip = document.getElementById('touch-strip');
+            const indicator = document.getElementById('touch-indicator');
+            
+            function handleTouch(e) {
+                e.preventDefault();
+                const rect = strip.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e;
+                const y = touch.clientY - rect.top;
+                // Invert: top = 1, bottom = 0
+                const value = 1 - Math.max(0, Math.min(1, y / rect.height));
+                state.inputs.touch = value;
+                state.isTouching = true;
+                indicator.classList.add('active');
+                updateControlValues();
+            }
+            
+            function handleTouchEnd() {
+                state.isTouching = false;
+                // Snap back to center when released
+                state.inputs.touch = 0.5;
+                document.getElementById('touch-indicator').classList.remove('active');
+                updateControlValues();
+            }
+            
+            strip.addEventListener('touchstart', handleTouch, { passive: false });
+            strip.addEventListener('touchmove', handleTouch, { passive: false });
+            strip.addEventListener('touchend', handleTouchEnd);
+            strip.addEventListener('touchcancel', handleTouchEnd);
+            
+            // Mouse support for testing
+            strip.addEventListener('mousedown', (e) => {
+                handleTouch(e);
+                const moveHandler = (e) => handleTouch(e);
+                const upHandler = () => {
+                    handleTouchEnd();
+                    document.removeEventListener('mousemove', moveHandler);
+                    document.removeEventListener('mouseup', upHandler);
+                };
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('mouseup', upHandler);
+            });
+        }
+        
+        function updateTouchIndicator() {
+            const indicator = document.getElementById('touch-indicator');
+            if (indicator) {
+                // Position: 0 = bottom, 1 = top
+                const percent = (1 - state.inputs.touch) * 100;
+                indicator.style.top = `calc(${percent}% - 6px)`;
+            }
         }
         
         // --- Audio Loop ---
@@ -930,7 +1103,11 @@
                 midi = quantizeToScale(Math.round(midi), scale);
             }
             
-            const freq = midiToFreq(midi);
+            // Apply bend (centered at 0.5)
+            const bendAmount = (state.controls.bend - 0.5) * 2 * state.settings.bendRange;
+            const bentMidi = midi + bendAmount;
+            
+            const freq = midiToFreq(bentMidi);
             
             // Update oscillator
             oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.01);
@@ -945,7 +1122,7 @@
             filterNode.frequency.setTargetAtTime(filterFreq, audioCtx.currentTime, 0.02);
             
             // Update displays
-            updateDisplays(midi, freq);
+            updateDisplays(midi, freq, bendAmount);
             
             requestAnimationFrame(audioLoop);
         }
@@ -1020,7 +1197,7 @@
         }
         
         // --- UI Updates ---
-        function updateDisplays(midi, freq) {
+        function updateDisplays(midi, freq, bendAmount = 0) {
             // Note display
             const noteName = midiToNoteName(Math.round(midi));
             document.getElementById('note-display').textContent = noteName;
@@ -1038,6 +1215,11 @@
             const timbrePercent = (state.controls.timbre * 100).toFixed(0);
             document.getElementById('timbre-value').textContent = `${timbrePercent}%`;
             document.getElementById('timbre-fill').style.width = `${state.controls.timbre * 100}%`;
+            
+            // Bend meter - show semitone offset
+            const bendDisplay = bendAmount >= 0 ? `+${bendAmount.toFixed(1)}` : bendAmount.toFixed(1);
+            document.getElementById('bend-value').textContent = bendDisplay;
+            document.getElementById('bend-fill').style.width = `${state.controls.bend * 100}%`;
         }
         
         function updateDebugInfo(roll, pitch, yaw) {
@@ -1156,6 +1338,9 @@
             document.getElementById('timbre-source').addEventListener('change', (e) => {
                 state.settings.timbreSource = e.target.value;
             });
+            document.getElementById('bend-source').addEventListener('change', (e) => {
+                state.settings.bendSource = e.target.value;
+            });
             
             // Invert buttons
             document.getElementById('pitch-invert').addEventListener('click', (e) => {
@@ -1169,6 +1354,10 @@
             document.getElementById('timbre-invert').addEventListener('click', (e) => {
                 state.settings.timbreInvert = !state.settings.timbreInvert;
                 e.target.classList.toggle('active', state.settings.timbreInvert);
+            });
+            document.getElementById('bend-invert').addEventListener('click', (e) => {
+                state.settings.bendInvert = !state.settings.bendInvert;
+                e.target.classList.toggle('active', state.settings.bendInvert);
             });
             
             // Scale buttons
@@ -1200,6 +1389,12 @@
             updateNoteRangeDisplay();
             
             // Reverb slider
+            // Bend range slider
+            document.getElementById('bend-range').addEventListener('input', (e) => {
+                state.settings.bendRange = parseInt(e.target.value);
+                document.getElementById('bend-range-display').textContent = `±${e.target.value} semitones`;
+            });
+            
             document.getElementById('reverb-amount').addEventListener('input', (e) => {
                 const amount = parseInt(e.target.value) / 100;
                 state.settings.reverbAmount = amount;
@@ -1214,6 +1409,9 @@
             
             // Calibrate button
             document.getElementById('calibrate-btn').addEventListener('click', calibrate);
+            
+            // Initialize touch strip
+            initTouchStrip();
             
             // Check if running in secure context
             if (!window.isSecureContext) {
