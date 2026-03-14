@@ -888,8 +888,8 @@
                     value = (Math.max(-90, Math.min(90, pitch)) + 90) / 180;
                     break;
                 case 'yaw':
-                    // Yaw: -180 to 180 degrees
-                    value = (yaw + 180) / 360;
+                    // Yaw: -45 to 45 degrees for more sensitivity (was -180 to 180)
+                    value = (Math.max(-45, Math.min(45, yaw)) + 45) / 90;
                     break;
                 default:
                     value = 0.5;
