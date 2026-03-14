@@ -633,6 +633,18 @@
                         </div>
                     </div>
                     
+                    <!-- Reverb -->
+                    <div class="setting-group">
+                        <div class="setting-group-title">Reverb</div>
+                        <div class="range-row">
+                            <div class="range-header">
+                                <span class="range-label">Amount</span>
+                                <span class="range-values" id="reverb-display">30%</span>
+                            </div>
+                            <input type="range" id="reverb-amount" min="0" max="100" value="30">
+                        </div>
+                    </div>
+                    
                     <!-- Calibration -->
                     <div class="setting-group">
                         <button id="calibrate-btn" class="calibrate-btn">
@@ -692,7 +704,8 @@
                 scale: 'chromatic',
                 waveform: 'sine',
                 lowNote: 48,  // MIDI note (C3)
-                highNote: 84  // MIDI note (C6)
+                highNote: 84,  // MIDI note (C6)
+                reverbAmount: 0.3  // 0-1
             }
         };
         
@@ -702,6 +715,25 @@
         let gainNode = null;
         let filterNode = null;
         let analyser = null;
+        let dryGain = null;
+        let wetGain = null;
+        let reverbNode = null;
+        
+        // Create impulse response for reverb
+        function createReverbImpulse(duration, decay) {
+            const sampleRate = audioCtx.sampleRate;
+            const length = sampleRate * duration;
+            const impulse = audioCtx.createBuffer(2, length, sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    // Exponential decay with random noise
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                }
+            }
+            return impulse;
+        }
         
         function initAudio() {
             if (audioCtx) return;
@@ -714,7 +746,12 @@
             filterNode = audioCtx.createBiquadFilter();
             analyser = audioCtx.createAnalyser();
             
-            // Configure
+            // Reverb nodes
+            dryGain = audioCtx.createGain();
+            wetGain = audioCtx.createGain();
+            reverbNode = audioCtx.createConvolver();
+            
+            // Configure main nodes
             oscillator.type = state.settings.waveform;
             oscillator.frequency.value = 440;
             gainNode.gain.value = 0;
@@ -723,10 +760,24 @@
             filterNode.Q.value = 1;
             analyser.fftSize = 256;
             
-            // Connect: oscillator -> filter -> gain -> analyser -> output
+            // Configure reverb
+            reverbNode.buffer = createReverbImpulse(2.5, 2.5);
+            dryGain.gain.value = 1 - state.settings.reverbAmount;
+            wetGain.gain.value = state.settings.reverbAmount;
+            
+            // Connect: oscillator -> filter -> gain -> [dry + reverb] -> analyser -> output
             oscillator.connect(filterNode);
             filterNode.connect(gainNode);
-            gainNode.connect(analyser);
+            
+            // Dry path
+            gainNode.connect(dryGain);
+            dryGain.connect(analyser);
+            
+            // Wet (reverb) path
+            gainNode.connect(reverbNode);
+            reverbNode.connect(wetGain);
+            wetGain.connect(analyser);
+            
             analyser.connect(audioCtx.destination);
             
             oscillator.start();
@@ -1135,6 +1186,19 @@
             
             // Initialize range displays
             updateNoteRangeDisplay();
+            
+            // Reverb slider
+            document.getElementById('reverb-amount').addEventListener('input', (e) => {
+                const amount = parseInt(e.target.value) / 100;
+                state.settings.reverbAmount = amount;
+                document.getElementById('reverb-display').textContent = `${e.target.value}%`;
+                
+                // Update wet/dry mix
+                if (dryGain && wetGain) {
+                    dryGain.gain.setTargetAtTime(1 - amount, audioCtx.currentTime, 0.05);
+                    wetGain.gain.setTargetAtTime(amount, audioCtx.currentTime, 0.05);
+                }
+            });
             
             // Calibrate button
             document.getElementById('calibrate-btn').addEventListener('click', calibrate);
