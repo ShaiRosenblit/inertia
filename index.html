@@ -595,10 +595,10 @@
                         <div class="setting-group-title">Scale</div>
                         <div class="scale-options">
                             <button class="scale-btn" data-scale="off">Off</button>
-                            <button class="scale-btn active" data-scale="chromatic">Chromatic</button>
+                            <button class="scale-btn" data-scale="chromatic">Chromatic</button>
                             <button class="scale-btn" data-scale="major">Major</button>
                             <button class="scale-btn" data-scale="minor">Minor</button>
-                            <button class="scale-btn" data-scale="pentatonic">Pentatonic</button>
+                            <button class="scale-btn active" data-scale="pentatonic">Pentatonic</button>
                             <button class="scale-btn" data-scale="blues">Blues</button>
                         </div>
                     </div>
@@ -607,9 +607,9 @@
                     <div class="setting-group">
                         <div class="setting-group-title">Waveform</div>
                         <div class="waveform-options">
-                            <button class="waveform-btn active" data-wave="sine">Sine</button>
+                            <button class="waveform-btn" data-wave="sine">Sine</button>
                             <button class="waveform-btn" data-wave="triangle">Tri</button>
-                            <button class="waveform-btn" data-wave="sawtooth">Saw</button>
+                            <button class="waveform-btn active" data-wave="sawtooth">Saw</button>
                             <button class="waveform-btn" data-wave="square">Sq</button>
                         </div>
                     </div>
@@ -701,8 +701,8 @@
                 volumeInvert: false,
                 timbreSource: 'yaw',
                 timbreInvert: false,
-                scale: 'chromatic',
-                waveform: 'sine',
+                scale: 'pentatonic',
+                waveform: 'sawtooth',
                 lowNote: 48,  // MIDI note (C3)
                 highNote: 84,  // MIDI note (C6)
                 reverbAmount: 0.3  // 0-1
